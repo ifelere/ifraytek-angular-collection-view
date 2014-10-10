@@ -54,3 +54,6 @@ I have tried to make the icon usage loose. For now [Font Awesome](http://fortawe
 `}])`
 
 A directive (`it-icon='<generic name>'`)  is used to automatically determine which icon pack is preferred. A few standard icons are declared. Anyother icon is guessed at.
+
+**License: MIT**
+
