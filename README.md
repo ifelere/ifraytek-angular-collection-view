@@ -5,8 +5,11 @@ Pure AngularJS directive for data tables
 
 For developers, like me, that have found jquery datatable based solution (even with angular-directive wrapper) not good enough may like this. I found myself doing a fair amount of hacking to enjoy the full benefit of angularjs when I use them; like often adding "fnRowCallback" handlers to inject a template and using scope object equivalents to achieve dound-data changes, and in that context doing manual dom transversal to look for a target element and inject my templates. Perharps I am was doing it correctly. This inspired this module. This is a pure angularjs code and normal ng-repeat. The design is based on an abstract collection view hence that tags in this module do not have 'td's or 'table' for that matter. For now only 'table' collection view is supported but it can easily be extended to support other types of list views. 
 
-Sample
+Usage
 ---------------------------------------------------------------
+
+Include ifraytek.angular.collection.view.js and dependencies on your page and register `it.collections` with your module.
+
 The test document provider contains this fragment:
 ![sample code](test/Capture2.PNG)
 This sample shows supported tags available in this module
@@ -28,7 +31,7 @@ There are three ways to pass data to this directive:
 2. Set `data-source='path'` attribute that holds a string that points to a http source of the data.
 3. Set `data-fetch='fn($fetch, $callback)'` a scope method that is called this: `fetch($options, $callback)`. The `$options` object has the attributes: offset:number, limit:number and search:string. This gives the parent a scope the opportunity to fetch the data anyhow. A promise may be returned or the `$callback` function utilized to dispatch the result. 
 
-Using `data-fetch="...` option also requires that the scope provides a way to serve total result count. This is done by passing `data-count='fn($search, $callback)'`. As above the callback may not be used. The count may be returned as a return value for the method, a promise or with the `$callback`. Same goes for `fetch`. 
+Using `data-fetch="...` option also requires that the scope provides a way to serve total result count. This is done by passing `data-count='fn($search, $callback)'`. As above the callback may be used. The count may also be returned as a return value for the method, a promise or with the `$callback`. 
 
 
 The provided sample produces this:
