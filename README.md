@@ -36,11 +36,12 @@ The provided sample produces this:
 
 Requirements
 --------------------------------------------
-* [angular-ui-bootstrap](http://angular-ui.github.io/bootstrap, "angular-ui-bootrap"): used its pagination
-* [angular](https://docs.angularjs.org, "angular")
-* [bootstrap](http://getbootstrap.com/, "bootstap")
-* [jquery](http://jquery.com, "jquery")
-* 
+* [angular-ui-bootstrap]: http://angular-ui.github.io/bootstrap "angular-ui-bootrap": used its pagination
+* [angular]: https://docs.angularjs.org "angular"
+* [bootstrap]: http://getbootstrap.com "bootstap"
+* [jquery]: http://jquery.com, "jquery"
+
+
 Icon Support
 --------------------------------------------
 I have tried to make the icon usage loose. For now [Font Awesome](http://fortawesome.github.io/Font-Awesome, "Font Awesome") and bootrap3 are supported. To switch at config time which icon pack is used do this:
