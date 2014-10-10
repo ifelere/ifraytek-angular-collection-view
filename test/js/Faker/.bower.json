@@ -1,0 +1,15 @@
+{
+  "name": "Faker",
+  "homepage": "https://github.com/Marak/Faker.js",
+  "version": "0.7.0",
+  "_release": "0.7.0",
+  "_resolution": {
+    "type": "version",
+    "tag": "0.7.0",
+    "commit": "c70af273f4ddc77ac5995f30ac5f68faa825ee00"
+  },
+  "_source": "git://github.com/Marak/Faker.js.git",
+  "_target": "0.7.0",
+  "_originalSource": "Faker",
+  "_direct": true
+}
