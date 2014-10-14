@@ -56,33 +56,71 @@
 			<div class="row">
 				<div class="col-sm-12">
 					<div data-ng-controller="TestCtrl">
+						<!--
 						<it-collection-view data-source="source"
 							execute="command($name, $arg1, $arg2)"
 							data-paging-style="pagination"
 							data-item-model="human" data-view-type="table" data-collection-class="table-bordered hot">
 							<it-header-row>
-								<it-cell-static>&nbsp;</it-cell-static>
-								<it-cell-static data-sortable="true" data-property="firstName">First Name</it-cell-static>
-								<it-cell-static data-sortable="true" data-property="lastName">Last Name</it-cell-static>
-								<it-cell-static data-sortable="true" data-property="company">Company</it-cell-static>
-								<it-cell-static>Greeting</it-cell-static>
-								<it-cell-static data-tag="td">Actions</it-cell-static>
+								<it-cell>&nbsp;</it-cell>
+								<it-cell data-sortable="true" data-property="firstName">First Name</it-cell>
+								<it-cell data-sortable="true" data-property="lastName">Last Name</it-cell>
+								<it-cell data-sortable="true" data-property="company">Company</it-cell>
+								<it-cell>Greeting</it-cell>
+								<it-cell data-tag="td">Actions</it-cell>
 							</it-header-row>
 							<it-body-row>
-								<it-cell-static class="text-right bg-primary">
+								<it-cell class="text-right bg-primary">
 									<b>
 										{{$index + 1}}
 									</b>
-								</it-cell-static>
-								<it-cell-static>{{human.firstName}}</it-cell-static>
+								</it-cell>
+								<it-cell>{{human.firstName}}</it-cell>
 								<it-cell-bind>lastName</it-cell-bind>
 								<it-cell-bind>company</it-cell-bind>
 								<it-cell-template data-model="person">greeting-cell.html</it-cell-template>
-								<it-cell-static class="text-right">
+								<it-cell class="text-right">
 									<a href="#" ng-click="command('edit', human)"><i class="fa fa-pencil"></i></a>
 									&nbsp;&nbsp;
 									<a href="#" ng-click="command('delete', human)"><i class="fa fa-trash-o"></i></a>
-								</it-cell-static>
+								</it-cell>
+							</it-body-row>
+						</it-collection-view>-->
+						
+						
+						<it-collection-view data-source="source"
+							execute="command($name, $arg1, $arg2)"
+							data-paging-style="pagination"
+							data-item-model="human" data-view-type="custom"
+							data-collection-class="panel panel-default"
+							data-header-class="panel-heading"
+							data-body-class="panel-body"
+							data-footer-class="panel-footer"
+							data-page-sizes="5,10,20"
+							data-page-size="10"
+							>
+							<it-header-row class="panel-title" tag="h2">
+								<it-cell>Summary</it-cell>
+							</it-header-row>
+							<it-body-row>
+								<it-cell>
+									<div class="row">
+										<div class="col-sm-4">
+											<img ng-src="{{human.avatar}}" />
+										</div>
+										<div class="col-sm-8">
+											<p>
+												First Name: <em>{{human.firstName}}</em>
+											</p>
+											<p>
+												Last Name: <em>{{human.lastName}}</em>
+											</p>
+											<p>
+												Company: <em>{{human.company}}</em>
+											</p>
+										</div>
+									</div>
+								</it-cell>
 							</it-body-row>
 						</it-collection-view>
 					</div>

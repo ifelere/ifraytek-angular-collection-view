@@ -1,8 +1,79 @@
-(function (angular, _) {
+(function (angular) {
 	var module = angular.module("it.collections", []);
 
+	var any = function (list, fn) {
+		if (angular.isArray(list)) {
+			for (var j = 0, len = list.length; j < len; j++) {
+				if (fn(list[j], i) === true) {
+					return true;
+				}
+			
+			}
+		}else if (angular.isObject(list)) {
+			for (var p in list) {
+				if (fn(list[p], p) === true) {
+					return true;
+				}
+			}
+		}
+		return false;
+	};
+	
+	var map = function (list, fn, ctx) {
+		if (angular.isDefined(list.map)) {
+			return list.map(fn);
+		}
+		var dest = [];
+		angular.forEach(list, function (it, key) {
+			dest.push(fn(it, key));
+		});
+		return dest;
+	};
+	
+	var pick = function (obj) {
+		var result = {};
+		for (var j = 1, len = arguments.length; j < len; j++) {
+			var key = arguments[j];
+			if (angular.isDefined(obj[key])) {
+				result[key] = obj[key];
+			}
+		}
+		return result;
+	
+	};
+	
+	// var indexOf = function (list, value, offset, len) {
+		// if (angular.isUndefined(len)) {
+			// len = list.length;
+		// }
+		// if (angular.isUndefined(offset)) {
+			// offset = 0;
+		// }
+		// for (var j = offset; j < len; j++) {
+			// if (list[j] === value) {
+				// return j;
+			// }
+		// }
+		// return -1;
+	// };
+	
+	// var omit = function (obj) {
+		// var result = {};
+		// for (var p in obj) {
+			// if (indexOf(arguments, p, 1) === -1) {
+				// result[p] = obj[p];
+			// }
+		// }
+		// return result;
+	
+	// };
+	/**
+	 * Object representing options for paging applied to angular-ui pager/pagination directives
+	 * */
 	module.constant("itPagingOptions", {
+		style : 'pagination',
 		paging : {
+			/* The key of the map may be passed as attributes of the root directiving */
 			"directionLinks" : {
 				format : function (v) {
 					return v === 'true';
@@ -35,7 +106,6 @@
 			}
 		},
 		pageSizes : [10, 50, 100]
-		
 	});
 	
 	module.constant("itCollectionOptions", {
@@ -70,7 +140,7 @@
 					spinner : "glyphicon glyphicon-refresh",
 					refresh : "glyphicon glyphicon-refresh"
 				}
-			},
+			}
 		}
 		
 		
@@ -90,7 +160,7 @@
 				}
 				return options.icons.manual[selected](name);
 			}
-		}
+		};
 	
 	}]);
 	
@@ -103,6 +173,9 @@
 	
 	var attributeTranslations = {
 		"itIf" : function (val) {
+			return 'data-ng-if="' + val + '"';
+		},
+		"ngIf" : function (val) {
 			return 'data-ng-if="' + val + '"';
 		},
 		"itShow" : function (val) {
@@ -167,9 +240,9 @@
 	};
 
 	var pickAttributes = function (attr, extend) {
-		var o = _.pick(attr, 'itNgClass', 'itClass',
+		var o = pick(attr, 'itNgClass', 'itClass',
 		'id', 'itClick', 'class', 'ngClass', 'style', "ngHide", "itHide",
-		'ngStyle', 'sortable', 'property', 'title', 'tag', 'ngModel', 'model');
+		'ngStyle', 'sortable', 'property', 'title', 'tag', 'ngModel', 'model', 'colspan');
 		if (extend) {
 			angular.extend(o, extend);
 		}
@@ -180,8 +253,10 @@
 		return {
 			open : function (o) {
 				return ('<' + tag + extractAttributes(o, 'itNgClass',
-						'itClass', 'ngClick', 'itClick', 'ngClass', 'id', "ngHide", "itHide", 'data-ng-repeat', 'ngRepeat', "ngRepeatEnd", "ngRepeatStart", 'class',
-						'ng-repeat', 'title', 'tag', 'data-ng-options', 'ng-options', 'style', 'ngStyle', 'model', 'ngModel') + '>');
+						'itClass', 'ngClick', 'itClick', 'ngClass', 'id', "ngHide", "itHide",
+						'data-ng-repeat', 'ngRepeat', "ngRepeatEnd", "ngRepeatStart", 'class',
+						'ng-repeat', 'title', 'tag', 'data-ng-options',
+						'colspan', 'ng-options', 'style', 'ngStyle', 'model', 'ngModel') + '>');
 			},
 			close : function () {
 				return ('</' + tag + '>');
@@ -189,15 +264,7 @@
 		};
 	};
 
-	var SortingColumnWrapper = function (property) {
-		this.open = function (o) {
-			return '<th class="sortable {{getSortClass(\'' + property + '\')}}" data-ng-click="changeSortKey(\'' + property + '\')">';
-		};
-		
-		this.close = function () {
-			return  '<i class="pull-right {{getSortIconClass(\'' + property + '\')}}"></i></th>';
-		};
-	};
+	
 	
 	var Cell = function () {};
 
@@ -225,7 +292,7 @@
 		};
 		
 		this.forEachCell = function (fn, ctx) {
-			angular.forEach(this.__cells, fn, ctx);
+			angular.forEach(this.__cells, fn, ctx || this);
 		};
 
 		this.getCellCount = function () {
@@ -384,6 +451,31 @@
 				};
 			}
 		]);
+	module.directive("itCell", [function () {
+				return {
+					restrict : 'E',
+					require : ['?^itBodyRow', '?^itHeaderRow'], //add it to header or body
+					compile : function () {
+						return function (scope, element, att, ctrl) {
+							var cell = new Cell();
+							cell.content = new StaticContentModel();
+							if (ctrl[0]) {
+								ctrl[0].addCell(cell, pickAttributes(att, {
+										data : element.html()
+									}));
+							} else if (ctrl[1]) {
+								ctrl[1].addCell(cell, pickAttributes(att, {
+										data : element.html()
+									}));
+							} else {
+								throw new Error("header or body row now found");
+							}
+						};
+
+					}
+				};
+			}
+		]);
 
 	module.directive("itCellBind", [function () {
 				return {
@@ -487,7 +579,6 @@
 		
 		$scope.command = function (name) {
 			var obj = {$name : name};
-			var count = 0;
 			for (var j = 1, len = arguments.length; j < len; j++) {
 				obj["$arg" + j] = arguments[j];
 			}
@@ -577,11 +668,14 @@
 		};
 
 		$scope.currentPage = 1;
-
-		$scope.pageSize = 10;
 		
-		$scope.pageSizes = options.pageSizes;
-
+		if (angular.isUndefined($scope.pageSize)) {
+			$scope.pageSize = 10;
+		}
+		
+		if (angular.isUndefined($scope.pageSizes)) {
+			$scope.pageSizes = options.pageSizes;
+		}
 		var getOffset = function (page) {
 			return (page - 1) * $scope.pageSize;
 		};
@@ -596,7 +690,9 @@
 			$scope.loading = false;
 			if (scheduleReload) {
 				scheduleReload = false;
-				$scope.reLoad(false);
+				$timeout(function() {
+					$scope.reLoad(false);
+				}, 400);
 			}
 		};
 
@@ -711,7 +807,7 @@
 			suspendReload = true; //suspend automatic loading
 			if (resetPage) {
 				$scope.currentPage = 1;
-			} 
+			}
 			loadData($scope.currentPage, getCurrentSearch());
 		};
 		
@@ -723,12 +819,148 @@
 	
 	module.controller("CollectionViewCtrl", ['$scope', '$timeout', 'itPagingOptions', 'itIconProvider', CollectionViewCtrl]);
 
+	module.factory("itArraySourceProvider", ['$filter', function ($filter)  {
+		var objectMatch = function (obj, q) {
+			return any(obj, function (value) {
+				if (value) {
+					if (angular.isString(value)) {
+						return value.indexOf(q) >= 0;
+					}
+					return String(value).indexOf(q) >= 0;
+				}
+			});
+		};
+				
+		var itemMatch = function (item, q) {
+			if (!q) {
+				return true;
+			}
+			if (angular.isString(item)) {
+				return item.indexOf(q) >= 0;
+			} else if (angular.isObject(item) && objectMatch(item, q)) {
+				return true;
+			} else {
+				return String(item).indexOf(q) >= 0;
+			}
+			return false;
+		};
+
+		
+		var Provider = function (source) {
+			
+			this.__source = source;
+			
+			this.fetch = function (options) {
+				var list = this.__source;
+				if (options.search) {
+					list = $filter("filter")(list, function (s) {
+						return itemMatch(s, options.search);
+					});
+				}
+				if (options.limit > 0) {
+					return list.slice(options.offset, options.limit + options.offset);
+				}
+				return list;
+				
+			};
+			
+			this.count = function (search) {
+				if (search) {
+					var c = 0;
+					angular.forEach(this.__source, function (s) {
+						if (itemMatch(s, search)) {
+							c++;
+						}
+					});
+					return c;
+				}
+				return this.__source.length;
+			};
+
+		};
+	
+	
+		return {
+			create : function (list) {
+				return new Provider(list);
+			}
+		};
+	}]);
+	
+	module.factory("itHttpSourceProvider", ['$http', '$q', function ($http, $q)  {
+		var Provider = function (url, countUrl) {
+			this.url = url;
+			this.countUrl = countUrl;
+			
+			this.fetch = function (options) {
+				var params = {};
+				if (options.limit > 0) {
+					params.limit = options.limit;
+					params.skip = options.offset;
+				}
+				if (options.search) {
+					params.q = options.search;
+				}
+				var deferred = $q.defer();
+				$http.get(this.url, {
+					params : params
+				}).success(function (data) {
+					deferred.resolve(data);
+				}).error(function (err) {
+					deferred.reject(err);
+				});
+				return deferred.promise;
+			};
+			
+			this.count = function (search) {
+				var params = {};
+				if (search) {
+					params.q = search;
+				}
+				var deferred = $q.defer();
+				$http.get(this.countUrl, {
+					params : params
+				}).success(function (data) {
+					deferred.resolve(data);
+				}).error(function (err) {
+					deferred.reject(err);
+				});
+				return deferred.promise;
+			};
+
+		};
+	
+	
+		return {
+			create : function (url, countUrl) {
+				if (angular.isUndefined(countUrl) || countUrl.length === 0) {
+					var idx = url.indexOf("?");
+					if (idx === -1) {
+						countUrl = url + "/count";
+					} else {
+						countUrl = url.replace(/\?/, '/count?');
+					}
+				}
+				return new Provider(url, countUrl);
+			}
+		};
+	}]);
 	
 	module.factory("itTableCollectionView", ['$templateCache', '$compile', '$q',
 		function ($templateCache, $compile, $q) {
+		
+		var SortingColumnWrapper = function (property) {
+			this.open = function () {
+				return '<th class="sortable {{getSortClass(\'' + property + '\')}}" data-ng-click="changeSortKey(\'' + property + '\')">';
+			};
+			
+			this.close = function () {
+				return  '<i class="pull-right {{getSortIconClass(\'' + property + '\')}}"></i></th>';
+			};
+		};
+		
 		return {
-			preferredPagingStyle : "pagination",
-			make : function (scope, attributes, controller) {
+			make : function (scope, attributes, controller, ngRepeat) {
 				var deferred = $q.defer();
 				
 				scope.noHeader = controller.headers.length === 0;
@@ -765,7 +997,7 @@
 					r.row.wrapCells("td");
 					
 					r.row.setModelName(itemModel);
-					var ngRepeat = itemModel + " in $data() | orderBy:getSortKey:reverSort";
+					//var ngRepeat = itemModel + " in $data() | orderBy:getSortKey:reverSort";
 					if (count === 1) {
 						r.options.ngRepeat = ngRepeat;
 					} else if (index === 0) {
@@ -776,144 +1008,261 @@
 					tbody.append(angular.element(r.row.render(r.options)));
 				});
 
-				$compile(wrapperElement)(scope, function (clone) {
-					deferred.resolve(clone);
-				});
+				$compile(wrapperElement)(scope);
+				deferred.resolve(wrapperElement);
 				return deferred.promise;
 			}
 		};
 	}]);
 	
+	module.factory("itCustomCollectionView", ['$templateCache', '$compile', '$q', function ($templateCache, $compile, $q) {
+		return {
+			make : function (scope, attributes, controller, ngRepeat) {
+				var deferred = $q.defer();
+				
+				scope.noHeader = controller.headers.length === 0;
+
+				scope.columnCount = 1;
+
+				if (controller.rows.length > 0) {
+					scope.columnCount = controller.rows[0].row.getCellCount() || 1;
+				}
+
+				var wrapperElement = angular.element($templateCache.get("it-custom-collection-view.html"));
+				
+				var getChild = function (parent, tag, match, cb) {
+					parent.find(tag).each(function () {
+						var child = angular.element(this);
+						if (match(child) === true) {
+							cb(child);
+							return false;
+						}
+					
+					});
+				};
+
+				if (!scope.noHeader) {
+					getChild(wrapperElement,  "div", function (v) {
+						return v.hasClass("collection-header");
+					}, function (el) {
+						angular.forEach(controller.headers, function (h) {
+							h.row.wrapper = createWrapper(h.options.tag || 'div');
+							el.append(angular.element(h.row.render(h.options)));
+						});
+					});
+				}
+				
+				getChild(wrapperElement, "div", function (v) {
+					return v.hasClass("collection-body");
+				}, function (body) {
+					var count = controller.rows.length;
+					angular.forEach(controller.rows, function (r, index) {
+						r.row.wrapper = createWrapper(r.options.tag || 'div');
+						r.options.ngHide = "loading"; 
+						r.row.setModelName(attributes.itemModel || "$model");
+						//var ngRepeat = itemModel + " in $data() | orderBy:getSortKey:reverSort";
+						if (count === 1) {
+							r.options.ngRepeat = ngRepeat;
+						} else if (index === 0) {
+							r.options.ngRepeatStart = ngRepeat;
+						} else if (index === count - 1) {
+							r.options.ngRepeatEnd = "";
+						}
+						body.append(angular.element(r.row.render(r.options)));
+					});
+				});
+				$compile(wrapperElement)(scope);
+				deferred.resolve(wrapperElement);
+				return deferred.promise;
+			}
+		};
+	}]);
 	
 	module.directive("itCollectionView", ['$http',
-			'$filter', '$q', '$templateCache', 'itPagingOptions', 'itTableCollectionView',
-			function ($http, $filter, $q, $templateCache, pagingOptions, tableView) {
-				var collectionTemplates = {
-					"default" : tableView,
-					"table" : tableView
-				};
-				var objectMatch = function (obj, q) {
-					return _.some(obj, function (value) {
-						if (value) {
-							if (_.isString(value)) {
-								return value.indexOf(q) >= 0;
-							}
-							return String(value).indexOf(q) >= 0;
-						}
-					});
+			'$filter', '$q', '$templateCache', 'itPagingOptions', '$injector',
+			function ($http, $filter, $q, $templateCache, pagingOptions, $injector) {
+				
+				// var makeView = function (scope, element, attr, controller, ngRepeat, provider) {
+					// var deferred = $q.defer();
+					// $injector.invoke([provider, function (view) {
+						// view.make(scope, element, attr, controller, ngRepeat)
+						// .then(function () {
+							// deferred.resolve.apply(deferred, arguments);
+						// }, function () {
+							// deferred.reject.apply(deferred, arguments);
+						// });
+					// }]);
+					// return deferred.promise;
+				// };
+				
+				
+				var viewRenderProviders = {
+					"default" : "itTableCollectionView",
+					table : "itTableCollectionView",
+					custom : "itCustomCollectionView"
 				};
 				
-				var itemMatch = function (item, q) {
-					if (!q) {
-						return true;
-					}
-					if (_.isString(item)) {
-						return item.indexOf(q) >= 0;
-					} else if (_.isObject(item) && objectMatch(item, q)) {
-						return true;
-					} else {
-						return String(item).indexOf(q) >= 0;
-					}
-					return false;
-				};
-
-				var LocalSource = function () {};
-				LocalSource.prototype = {
-					count : function () {},
-					fetch : function () {}
-				};
-
-				var ArraySource = function (list) {
-					this.list = list;
-				};
-
-				ArraySource.prototype = new LocalSource();
-
-				ArraySource.constructor = ArraySource;
-
-				ArraySource.prototype.count = function (search) {
-					search = search.$search || search;
-					if (search) {
-						var c = 0;
-						angular.forEach(this.list, function (x) {
-							if (itemMatch(x, search)) {
-								c++;
+				var sources = {
+					"array" : function (list, scope, element, attr, cb) {
+						$injector.invoke(["itArraySourceProvider", function (P) {
+							var provider =  P.create(list);
+							scope.fetch = function (o) {
+								return provider.fetch(o.$options, o.$callback);
+							};
+						
+							scope.count = function (o) {
+								return provider.count(o.$search, o.$callback);
+							};
+							if (angular.isFunction(cb)) {
+								cb();
 							}
-						});
-						return c;
+						}]);
+					},
+					"http" : function (url, scope, element, attr, cb) {
+						$injector.invoke(["itHttpSourceProvider", function (P) {
+							
+							var provider =  P.create(url, attr.countUrl);
+							
+							scope.fetch = function (o) {
+								return provider.fetch(o.$options, o.$callback);
+							};
+						
+							scope.count = function (o) {
+								return provider.count(o.$search, o.$callback);
+							};
+							if (angular.isFunction(cb)) {
+								cb();
+							}
+						}]);
+					
+					
 					}
-					return this.list.length;
+				
 				};
+				// var objectMatch = function (obj, q) {
+					// return any(obj, function (value) {
+						// if (value) {
+							// if (_.isString(value)) {
+								// return value.indexOf(q) >= 0;
+							// }
+							// return String(value).indexOf(q) >= 0;
+						// }
+					// });
+				// };
+				
+				// var itemMatch = function (item, q) {
+					// if (!q) {
+						// return true;
+					// }
+					// if (_.isString(item)) {
+						// return item.indexOf(q) >= 0;
+					// } else if (_.isObject(item) && objectMatch(item, q)) {
+						// return true;
+					// } else {
+						// return String(item).indexOf(q) >= 0;
+					// }
+					// return false;
+				// };
+				
+				
 
-				ArraySource.prototype.fetch = function (options) {
-					//the parameter will be coming from a scope wrapper caller
-					options = options.$options || options;
-					var __list;
-					if (options.search) {
-						__list = $filter("filter")(this.list, function (o) {
-							return itemMatch(o, options.search);
-						});
-					} else {
-						__list = this.list;
-					}
-					if (__list.length > 0) {
-						return __list.slice(options.offset, options.limit + options.offset);
-					}
-					return [];
-				};
+				// var LocalSource = function () {};
+				// LocalSource.prototype = {
+					// count : function () {},
+					// fetch : function () {}
+				// };
 
-				var HttpSource = function (url, countUrl) {
-					this.countUrl = countUrl;
-					this.url = url;
-				};
+				// var ArraySource = function (list) {
+					// this.list = list;
+				// };
 
-				HttpSource.prototype = new LocalSource();
+				// ArraySource.prototype = new LocalSource();
 
-				HttpSource.constructor = HttpSource;
+				// ArraySource.constructor = ArraySource;
 
-				HttpSource.prototype.count = function (search) {
-					//the parameter will be coming from a scope wrapper caller
-					search = search.$search || search;
-					var full = this.countUrl;
-					if (search) {
-						var idx = full.indexOf('?');
-						if (idx === -1) {
-							full = full + "?q=" + encodeURIComponent(search);
-						} else {
-							full = full + "&q=" + encodeURIComponent(search);
-						}
-					}
-					var deferred = $q.defer();
-					$http.get(full).success(function (r) {
-						deferred.resolve(r);
-					}).fail(function (err) {
-						deferred.reject(err);
-					});
-					return deferred.promise;
-				};
+				// ArraySource.prototype.count = function (search) {
+					// search = search.$search || search;
+					// if (search) {
+						// var c = 0;
+						// angular.forEach(this.list, function (x) {
+							// if (itemMatch(x, search)) {
+								// c++;
+							// }
+						// });
+						// return c;
+					// }
+					// return this.list.length;
+				// };
 
-				HttpSource.prototype.fetch = function (options) {
-					//the parameter will be coming from a scope wrapper caller
-					options = options.$options || options;
-					var full = this.url;
+				// ArraySource.prototype.fetch = function (options) {
+					// //the parameter will be coming from a scope wrapper caller
+					// options = options.$options || options;
+					// var __list;
+					// if (options.search) {
+						// __list = $filter("filter")(this.list, function (o) {
+							// return itemMatch(o, options.search);
+						// });
+					// } else {
+						// __list = this.list;
+					// }
+					// if (__list.length > 0) {
+						// return __list.slice(options.offset, options.limit + options.offset);
+					// }
+					// return [];
+				// };
 
-					var idx = full.indexOf('?');
+				// var HttpSource = function (url, countUrl) {
+					// this.countUrl = countUrl;
+					// this.url = url;
+				// };
 
-					var startDelim = idx === -1 ? '?' : '&';
+				// HttpSource.prototype = new LocalSource();
 
-					if (options.search) {
-						full = full + startDelim + "q=" + encodeURIComponent(options.search);
-						startDelim = "&";
-					}
-					full = full + startDelim + "skip=" + options.offset + "&limit=" + options.limit;
-					var deferred = $q.defer();
-					$http.get(full).success(function (r) {
-						deferred.resolve(r);
-					}).fail(function (err) {
-						deferred.reject(err);
-					});
-					return deferred.promise;
-				};
+				// HttpSource.constructor = HttpSource;
+
+				// HttpSource.prototype.count = function (search) {
+					// //the parameter will be coming from a scope wrapper caller
+					// search = search.$search || search;
+					// var full = this.countUrl;
+					// if (search) {
+						// var idx = full.indexOf('?');
+						// if (idx === -1) {
+							// full = full + "?q=" + encodeURIComponent(search);
+						// } else {
+							// full = full + "&q=" + encodeURIComponent(search);
+						// }
+					// }
+					// var deferred = $q.defer();
+					// $http.get(full).success(function (r) {
+						// deferred.resolve(r);
+					// }).fail(function (err) {
+						// deferred.reject(err);
+					// });
+					// return deferred.promise;
+				// };
+
+				// HttpSource.prototype.fetch = function (options) {
+					// //the parameter will be coming from a scope wrapper caller
+					// options = options.$options || options;
+					// var full = this.url;
+
+					// var idx = full.indexOf('?');
+
+					// var startDelim = idx === -1 ? '?' : '&';
+
+					// if (options.search) {
+						// full = full + startDelim + "q=" + encodeURIComponent(options.search);
+						// startDelim = "&";
+					// }
+					// full = full + startDelim + "skip=" + options.offset + "&limit=" + options.limit;
+					// var deferred = $q.defer();
+					// $http.get(full).success(function (r) {
+						// deferred.resolve(r);
+					// }).fail(function (err) {
+						// deferred.reject(err);
+					// });
+					// return deferred.promise;
+				// };
 
 				var resolvePagingOptions = function (scope, att) {
 					angular.forEach(pagingOptions.paging, function (obj, property) {
@@ -921,59 +1270,78 @@
 						if (angular.isDefined(att[obj.attribute])) {
 							value = att[obj.attribute];
 							if (obj.format) {
-								value = obj.format(value);
+								value = obj.format(value, scope);
 							}
-						}else {
+						}else if (angular.isDefined(obj.defaultValue)) {
 							value = obj.defaultValue;
 						}
 						scope[property] = value;
 					});
 				};
 				
-				var tryUseSource = function (scope, att, controller) {
+				
+				
+				
+				var tryUseSource = function (scope, element, att, controller) {
 					//if source attribute is set replace all callbacks
 					if (att.source) {
 						scope.$watchCollection(function () {
 							return scope.$parent.$eval(att.source);
 						}, function (source) {
-							if (_.isString(source)) {
-								var countUrl = att.countUrl || '';
-								if (countUrl.length === 0) {
-									var idx = source.indexOf("?");
-									if (idx === -1) {
-										countUrl = source + "/count";
-									} else {
-										countUrl = source.replace(/\?/, '/count?');
-									}
-								}
-								var localSrc = new HttpSource(source, countUrl);
-								_.bindAll(localSrc, "fetch", "count");
-								scope.fetch = localSrc.fetch;
-								scope.count = localSrc.count;
-								controller.notifyComplete();
-							} else if (_.isArray(source)) {
-								var src = new ArraySource(source);
-								_.bindAll(src, "fetch", "count");
-								scope.fetch = src.fetch;
-								scope.count = src.count;
-								controller.notifyComplete();
+							if (angular.isString(source)) {
+								sources.http(source, scope, element, att, function () {
+									controller.notifyComplete();
+								});
+							
+							}else if (angular.isArray(source)) {
+								sources.array(source, scope, element, att, function () {
+									controller.notifyComplete();
+								});
 							}
+							// if (_.isString(source)) {
+								// var countUrl = att.countUrl || '';
+								// if (countUrl.length === 0) {
+									// var idx = source.indexOf("?");
+									// if (idx === -1) {
+										// countUrl = source + "/count";
+									// } else {
+										// countUrl = source.replace(/\?/, '/count?');
+									// }
+								// }
+								// var localSrc = new HttpSource(source, countUrl);
+								// _.bindAll(localSrc, "fetch", "count");
+								// scope.fetch = localSrc.fetch;
+								// scope.count = localSrc.count;
+								// controller.notifyComplete();
+							// } else if (_.isArray(source)) {
+								// var src = new ArraySource(source);
+								// _.bindAll(src, "fetch", "count");
+								// scope.fetch = src.fetch;
+								// scope.count = src.count;
+								// controller.notifyComplete();
+							// }
 						});
 						
 					}
 				};
 				
 				var renderContentHtml = function (scope, element, att, controller) {
+					
 					var viewType = att.viewType || "default";
-					var template = collectionTemplates[viewType];
-					scope.pagingStyle = scope.pagingStyle || template.preferredPagingStyle;
-					template.make(scope, att, controller)
-					.then(function (newContent) {
-						// element.html('');
-						// element.append(newContent);
-						element.replaceWith(newContent);
-						controller.notifyComplete(); //notify that data should be fetched
-					});
+					
+					var ngRepeat = (att.itemModel || '$model') + " in $data() | orderBy:getSortKey:reverSort";
+
+					scope.pagingStyle = att.pagingStyle || pagingOptions.style;
+					
+					var provider = viewRenderProviders[viewType];
+					
+					$injector.invoke([provider, function (P) {
+						P.make(scope, att, controller, ngRepeat)
+						.then(function (root) {
+							element.replaceWith(root);
+							controller.notifyComplete();
+						});
+					}]);
 				};
 				
 				return {
@@ -984,6 +1352,9 @@
 						collectionClass : '@',
 						collectionStyle : '@',
 						pagingClass : '@',
+						bodyClass : '@',
+						headerClass : '@',
+						footerClass : '@',
 						pagingMaxSize : '@',
 						count : '&',
 						pagingControlTemplateUrl : "@",
@@ -996,22 +1367,34 @@
 					controller : "CollectionViewCtrl",
 					compile : function () {
 						return function postLink(scope, element, att, controller) {
+							if (angular.isDefined(att.pageSizes)) {
+								scope.pageSizes = map(att.pageSizes.split(","), function (s) {
+									return parseInt(s.replace(/(?:^\s+)|(?:\s+$)/, ''), 10);
+								});
+							}
+							if (angular.isDefined(att.pageSize)) {
+								scope.pageSize = parseInt(att.pageSize, 10);
+							}
 							resolvePagingOptions(scope, att);
-							tryUseSource(scope, att, controller);
 							renderContentHtml(scope, element, att, controller);
+							tryUseSource(scope, element, att, controller);
 						};
 					}
 				};
 			}
 		]);
+		
+	module.run(['$templateCache', function ($templateCache) {
+		$templateCache.put("it-current-page-info.html", '<span>'.concat(
+			'Page {{currentPage}}/{{pageCount}} ({{totalCount}})',
+		'</span>'));
+	}]);
 
 	module.run(['$templateCache', function ($templateCache) {
 				$templateCache.put("it-collection-search-control.html", '<div class="input-group">'.concat(
 							'<input type="text" class="form-control" placeholder="search" data-ng-model="q" data-ng-change="search(q, true)" />',
-								'<div class="input-group-btn">',
-									'<button type="button" class="btn btn-default" data-ng-click="search(q, false)">',
-										'<i it-icon="search"></i>',
-									'</button>',
+								'<div class="input-group-addon">',
+									'<i it-icon="search"></i>',
 								'</div>',
 						'</div>'));
 			}
@@ -1019,12 +1402,14 @@
 
 	module.run(["$templateCache", function ($templateCache) {
 				$templateCache.put("it-collection-pagination.html", '<pagination data-ng-model="currentPage"'.concat(
-						'max-size="{{pagingMaxSize || 5}}"',
+						'max-size="{{pagingMaxSize || 5}}" ',
+						'class="pagingClass"',
 						'total-items="totalCount" ',
 						'items-per-page="pageSize" ',
 						'previous-text="{{previousText}}" ',
 						'next-text="{{nextText}}" ',
 						'first-text="{{firstText}}" ',
+						'num-pages="$parent.pageCount" ',
 						'last-text="{{lastText}}" ',
 						'direction-links="directionLinks" ',
 						'boundary-links="boundaryLinks" ',
@@ -1036,7 +1421,9 @@
 	module.run(["$templateCache", function ($templateCache) {
 				$templateCache.put("it-collection-pager.html", '<pager data-ng-model="currentPage"'.concat(
 						'total-items="totalCount" ',
+						'class="pagingClass"',
 						'previous-text="{{previousText}}" ',
+						'num-pages="$parent.pageCount" ',
 						'next-text="{{nextText}}" ',
 						'items-per-page="pageSize" ',
 						'data-ng-change="onPageChanged(currentPage)"',
@@ -1059,14 +1446,15 @@
 										'<tr class="{{footerClass}}">',
 											'<td colspan="{{columnCount}}">',
 												'<div class="row">',
-												'<div class="col-sm-2">',
-												'<select data-ng-model="pageSize" ',
-													'data-ng-options="sz for sz in pageSizes" ',
-													'data-ng-change="reLoad(true)"></select>',
-												'</div>',
-												'<div class="col-sm-10 text-right">',
-													'<ng-include src="getPagingControlsTemplateUrl()"></ng-include>',
-												'</div>',
+													'<div class="col-sm-3">',
+														'<select data-ng-model="pageSize" ',
+															'data-ng-options="sz for sz in pageSizes" ',
+															'data-ng-change="reLoad(true)"></select>',
+															' &nbsp; <span ng-include="\'it-current-page-info.html\'"></span>',
+													'</div>',
+													'<div class="col-sm-9 text-right">',
+														'<ng-include src="getPagingControlsTemplateUrl()"></ng-include>',
+													'</div>',
 												'</div>',
 											'</td>',
 										'</tr>',
@@ -1074,8 +1462,10 @@
 									'<tbody>',
 										'<tr data-ng-if="loading">',
 											'<td colspan="{{columnCount}}" class="text-center">',
-												'<div data-ng-if="loadingTemplateUrl" data-ng-include="loadingTemplateUrl"></span>',
-												'<span data-ng-if="loadingTemplateUrl">',
+												'<div data-ng-if="loadingTemplateUrl">',
+													'<ng-include src="loadingTemplateUrl"><ng-include>',
+												'</div>',
+												'<span data-ng-if="!loadingTemplateUrl">',
 													'<i it-icon="spinner" class="fa-spin fa-2x"></i>',
 													'<em>{{loadingMessage || "loading &hellip;"}}</em>',
 												'<span>',
@@ -1083,8 +1473,10 @@
 										'</td>',
 										'<tr data-ng-if="$empty">',
 											'<td colspan="{{columnCount}}" class="text-center">',
-												'<em><b>{{emptyMessage || "No record found"}}</b></em>',
-												'<span data-ng-if="emptyTemplateUrl" data-ng-include="emptyTemplateUrl"></span>',
+												'<em data-ng-if="!emptyTemplateUrl"><b>{{emptyMessage || "No record found"}}</b></em>',
+												'<span data-ng-if="emptyTemplateUrl">',
+													'<ng-include src="emptyTemplateUrl"></ng-include>',
+												'</span>',
 											'</td>',
 										'</td>',
 									'</tbody>',
@@ -1093,4 +1485,51 @@
 						'</div>'));
 			}
 		]);
-})(angular, _);
+		
+	module.run(['$templateCache', function ($templateCache) {
+				$templateCache.put("it-custom-collection-view.html", '<div class="it-collection-view-wrapper">'.concat(
+							'<div id="it-collection-search-wrapper">',
+								'<ng-include style="width: 270px;" class="pull-right" src="getSearchControlTemplateUrl()"> </ng-include>',
+								'<p>&nbsp;</p>',
+							'</div>',
+							'<br class="clearfix" />',
+							'<div class="">',
+								'<div class="{{collectionClass}}" style="{{collectionStyle}}">',
+									'<div data-ng-hide="noHeader" class="{{headerClass}} collection-header">',
+									'</div>',
+									'<div class="collection-body {{bodyClass}}">',
+										'<div data-ng-if="loading">',
+											'<div data-ng-if="loadingTemplateUrl">',
+												'<ng-include src="loadingTemplateUrl"><ng-include>',
+											'</div>',
+											'<span data-ng-if="!loadingTemplateUrl">',
+												'<i it-icon="spinner" class="fa-spin fa-2x"></i>',
+												'<em>{{loadingMessage || "loading &hellip;"}}</em>',
+											'<span>',
+										'</div>',
+										'<div data-ng-if="$empty">',
+											'<p data-ng-if="!emptyTemplateUrl" class="text-center"><em><b>{{emptyMessage || "No record found"}}</b></em></p>',
+											'<div data-ng-if="emptyTemplateUrl">',
+												'<ng-include src="emptyTemplateUrl"></ng-include>',
+											'</div>',
+										'</div>',
+									'</div>',
+									'<div class="{{footerClass}} collection-footer">',
+										'<div class="row">',
+											'<div class="col-sm-3">',
+												'<select data-ng-model="pageSize" ',
+													'data-ng-options="sz for sz in pageSizes" ',
+													'data-ng-change="reLoad(true)"></select>',
+													' &nbsp; <span ng-include="\'it-current-page-info.html\'"></span>',
+											'</div>',
+											'<div class="col-sm-9 text-right">',
+												'<ng-include src="getPagingControlsTemplateUrl()"></ng-include>',
+											'</div>',
+										'</div>',
+									'</div>',
+								'</div>',
+							'</div>',
+						'</div>'));
+			}
+		]);
+})(angular);
