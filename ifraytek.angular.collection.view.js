@@ -25,7 +25,12 @@
 		}
 		var dest = [];
 		angular.forEach(list, function (it, key) {
-			dest.push(fn(it, key));
+			if (ctx) {
+				dest.push(fn.call(ctx, it, key));
+			}else {
+				dest.push(fn(it, key));
+			}
+			
 		});
 		return dest;
 	};
@@ -40,6 +45,14 @@
 		}
 		return result;
 	
+	};
+	
+	var addClass = function (map, name) {
+		if (angular.isDefined(map["class"])) {
+			map["class"] += (" " + name);
+		}else {
+			map["class"] = name;
+		}
 	};
 	
 	// var indexOf = function (list, value, offset, len) {
@@ -242,7 +255,7 @@
 	var pickAttributes = function (attr, extend) {
 		var o = pick(attr, 'itNgClass', 'itClass',
 		'id', 'itClick', 'class', 'ngClass', 'style', "ngHide", "itHide",
-		'ngStyle', 'sortable', 'property', 'title', 'tag', 'ngModel', 'model', 'colspan');
+		'ngStyle', 'sortable', 'property', 'title', 'it-collection-body-item', 'tag', 'ngModel', 'model', 'colspan');
 		if (extend) {
 			angular.extend(o, extend);
 		}
@@ -256,7 +269,7 @@
 						'itClass', 'ngClick', 'itClick', 'ngClass', 'id', "ngHide", "itHide",
 						'data-ng-repeat', 'ngRepeat', "ngRepeatEnd", "ngRepeatStart", 'class',
 						'ng-repeat', 'title', 'tag', 'data-ng-options',
-						'colspan', 'ng-options', 'style', 'ngStyle', 'model', 'ngModel') + '>');
+						'colspan', 'ng-options', 'it-collection-body-item', 'style', 'ngStyle', 'model', 'ngModel') + '>');
 			},
 			close : function () {
 				return ('</' + tag + '>');
@@ -555,7 +568,7 @@
 			}
 		]);
 
-	var CollectionViewCtrl = function ($scope, $timeout, options, iconProvider) {
+	var CollectionViewCtrl = function ($scope, $timeout, options, iconProvider, $interval) {
 		this.headers = [];
 		this.rows = [];
 
@@ -697,6 +710,9 @@
 		};
 
 		var replaceList = function (list) {
+			if (!angular.isArray(list)) {
+				list = list.data; //assume list came from a response object of promise
+			}
 			filteredView.length = 0;
 			Array.prototype.push.apply(filteredView, list);
 			$scope.$empty = list.length === 0;
@@ -743,7 +759,8 @@
 			if (r) {
 				if (angular.isFunction(r.then)) {
 					r.then(function (c) {
-						$scope.totalCount = c;
+						//if c is from a promise response count may be present on #data attribute
+						$scope.totalCount = c.data || c;
 						$scope.$empty = c === 0;
 					});
 				} else if (angular.isNumber(r)) {
@@ -811,13 +828,31 @@
 			loadData($scope.currentPage, getCurrentSearch());
 		};
 		
+		var refreshStarted = false;
+		
+		var intervalHandle;
 		this.notifyComplete = function () {
 			refreshCount(getCurrentSearch());
 			loadData(1, getCurrentSearch());
+			if (refreshStarted === false) {
+				refreshStarted = true;
+				if (angular.isDefined($scope.refreshInterval)) {
+					intervalHandle = $interval(function() {
+						if (!$scope.loading) {
+							refreshCount();
+							$scope.reLoad();
+						}
+					}, parseInt($scope.refreshInterval, 10));
+					
+					$scope.$watch("$destroy", function () {
+						$interval.cancel(intervalHandle);
+					});
+				}
+			}
 		};
 	};
 	
-	module.controller("CollectionViewCtrl", ['$scope', '$timeout', 'itPagingOptions', 'itIconProvider', CollectionViewCtrl]);
+	module.controller("CollectionViewCtrl", ['$scope', '$timeout', 'itPagingOptions', 'itIconProvider', '$interval', CollectionViewCtrl]);
 
 	module.factory("itArraySourceProvider", ['$filter', function ($filter)  {
 		var objectMatch = function (obj, q) {
@@ -921,7 +956,7 @@
 				$http.get(this.countUrl, {
 					params : params
 				}).success(function (data) {
-					deferred.resolve(data);
+					deferred.resolve(angular.isNumber(data) ? data : parseInt(data, 10));
 				}).error(function (err) {
 					deferred.reject(err);
 				});
@@ -990,13 +1025,10 @@
 
 				var tbody = wrapperElement.find("tbody");
 				var count = controller.rows.length;
-				var itemModel = attributes.itemModel || "$model";
 				angular.forEach(controller.rows, function (r, index) {
 					r.row.wrapper = createWrapper("tr");
 					r.options.ngHide = "loading"; //hide this row when loading
 					r.row.wrapCells("td");
-					
-					r.row.setModelName(itemModel);
 					//var ngRepeat = itemModel + " in $data() | orderBy:getSortKey:reverSort";
 					if (count === 1) {
 						r.options.ngRepeat = ngRepeat;
@@ -1058,8 +1090,7 @@
 					var count = controller.rows.length;
 					angular.forEach(controller.rows, function (r, index) {
 						r.row.wrapper = createWrapper(r.options.tag || 'div');
-						r.options.ngHide = "loading"; 
-						r.row.setModelName(attributes.itemModel || "$model");
+						
 						//var ngRepeat = itemModel + " in $data() | orderBy:getSortKey:reverSort";
 						if (count === 1) {
 							r.options.ngRepeat = ngRepeat;
@@ -1081,20 +1112,6 @@
 	module.directive("itCollectionView", ['$http',
 			'$filter', '$q', '$templateCache', 'itPagingOptions', '$injector',
 			function ($http, $filter, $q, $templateCache, pagingOptions, $injector) {
-				
-				// var makeView = function (scope, element, attr, controller, ngRepeat, provider) {
-					// var deferred = $q.defer();
-					// $injector.invoke([provider, function (view) {
-						// view.make(scope, element, attr, controller, ngRepeat)
-						// .then(function () {
-							// deferred.resolve.apply(deferred, arguments);
-						// }, function () {
-							// deferred.reject.apply(deferred, arguments);
-						// });
-					// }]);
-					// return deferred.promise;
-				// };
-				
 				
 				var viewRenderProviders = {
 					"default" : "itTableCollectionView",
@@ -1139,130 +1156,6 @@
 					}
 				
 				};
-				// var objectMatch = function (obj, q) {
-					// return any(obj, function (value) {
-						// if (value) {
-							// if (_.isString(value)) {
-								// return value.indexOf(q) >= 0;
-							// }
-							// return String(value).indexOf(q) >= 0;
-						// }
-					// });
-				// };
-				
-				// var itemMatch = function (item, q) {
-					// if (!q) {
-						// return true;
-					// }
-					// if (_.isString(item)) {
-						// return item.indexOf(q) >= 0;
-					// } else if (_.isObject(item) && objectMatch(item, q)) {
-						// return true;
-					// } else {
-						// return String(item).indexOf(q) >= 0;
-					// }
-					// return false;
-				// };
-				
-				
-
-				// var LocalSource = function () {};
-				// LocalSource.prototype = {
-					// count : function () {},
-					// fetch : function () {}
-				// };
-
-				// var ArraySource = function (list) {
-					// this.list = list;
-				// };
-
-				// ArraySource.prototype = new LocalSource();
-
-				// ArraySource.constructor = ArraySource;
-
-				// ArraySource.prototype.count = function (search) {
-					// search = search.$search || search;
-					// if (search) {
-						// var c = 0;
-						// angular.forEach(this.list, function (x) {
-							// if (itemMatch(x, search)) {
-								// c++;
-							// }
-						// });
-						// return c;
-					// }
-					// return this.list.length;
-				// };
-
-				// ArraySource.prototype.fetch = function (options) {
-					// //the parameter will be coming from a scope wrapper caller
-					// options = options.$options || options;
-					// var __list;
-					// if (options.search) {
-						// __list = $filter("filter")(this.list, function (o) {
-							// return itemMatch(o, options.search);
-						// });
-					// } else {
-						// __list = this.list;
-					// }
-					// if (__list.length > 0) {
-						// return __list.slice(options.offset, options.limit + options.offset);
-					// }
-					// return [];
-				// };
-
-				// var HttpSource = function (url, countUrl) {
-					// this.countUrl = countUrl;
-					// this.url = url;
-				// };
-
-				// HttpSource.prototype = new LocalSource();
-
-				// HttpSource.constructor = HttpSource;
-
-				// HttpSource.prototype.count = function (search) {
-					// //the parameter will be coming from a scope wrapper caller
-					// search = search.$search || search;
-					// var full = this.countUrl;
-					// if (search) {
-						// var idx = full.indexOf('?');
-						// if (idx === -1) {
-							// full = full + "?q=" + encodeURIComponent(search);
-						// } else {
-							// full = full + "&q=" + encodeURIComponent(search);
-						// }
-					// }
-					// var deferred = $q.defer();
-					// $http.get(full).success(function (r) {
-						// deferred.resolve(r);
-					// }).fail(function (err) {
-						// deferred.reject(err);
-					// });
-					// return deferred.promise;
-				// };
-
-				// HttpSource.prototype.fetch = function (options) {
-					// //the parameter will be coming from a scope wrapper caller
-					// options = options.$options || options;
-					// var full = this.url;
-
-					// var idx = full.indexOf('?');
-
-					// var startDelim = idx === -1 ? '?' : '&';
-
-					// if (options.search) {
-						// full = full + startDelim + "q=" + encodeURIComponent(options.search);
-						// startDelim = "&";
-					// }
-					// full = full + startDelim + "skip=" + options.offset + "&limit=" + options.limit;
-					// var deferred = $q.defer();
-					// $http.get(full).success(function (r) {
-						// deferred.resolve(r);
-					// }).fail(function (err) {
-						// deferred.reject(err);
-					// });
-					// return deferred.promise;
-				// };
 
 				var resolvePagingOptions = function (scope, att) {
 					angular.forEach(pagingOptions.paging, function (obj, property) {
@@ -1335,6 +1228,12 @@
 					
 					var provider = viewRenderProviders[viewType];
 					
+					angular.forEach(controller.rows, function (r) {
+						r.options.ngHide = "loading"; 
+						r.row.setModelName(att.itemModel || "$model");
+						addClass(r.options, "it-collection-body-item");
+					});
+					
 					$injector.invoke([provider, function (P) {
 						P.make(scope, att, controller, ngRepeat)
 						.then(function (root) {
@@ -1357,6 +1256,7 @@
 						footerClass : '@',
 						pagingMaxSize : '@',
 						count : '&',
+						refreshInterval : '@',
 						pagingControlTemplateUrl : "@",
 						searchControlTemplateUrl : '@',
 						emptyMessage : '@',
@@ -1466,7 +1366,7 @@
 													'<ng-include src="loadingTemplateUrl"><ng-include>',
 												'</div>',
 												'<span data-ng-if="!loadingTemplateUrl">',
-													'<i it-icon="spinner" class="fa-spin fa-2x"></i>',
+													'<i it-icon="spinner" class="fa-spin fa-2x"></i> &nbsp;&nbsp;',
 													'<em>{{loadingMessage || "loading &hellip;"}}</em>',
 												'<span>',
 											'</td>',
@@ -1503,7 +1403,7 @@
 												'<ng-include src="loadingTemplateUrl"><ng-include>',
 											'</div>',
 											'<span data-ng-if="!loadingTemplateUrl">',
-												'<i it-icon="spinner" class="fa-spin fa-2x"></i>',
+												'<i it-icon="spinner" class="fa-spin fa-2x"></i>&nbsp;&nbsp;',
 												'<em>{{loadingMessage || "loading &hellip;"}}</em>',
 											'<span>',
 										'</div>',

@@ -1,3 +1,7 @@
 .sortable {
 	cursor: pointer !important;
 }
+
+div.it-collection-body-item:nth-child(odd) {
+	border-top: 1px inset;
+}
