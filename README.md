@@ -49,17 +49,80 @@ You can have as many `it-body-row` as you like. In that case `data-ng-repeat-sta
 
 You can transfer common html attributes on the tags listed above including 'ng-click'. It's just that 'ng-click' is treated in a specific way. I am still new in the *angularjs* game. Don't know why an expression like `ng-click="$parent.doSomething()"` isn't working on the parent scope. For now the only way to respond to such behavior is to do: `ng-click="command(<name>, ...)"`. The directive allows the parent scope to respond to such commands by dispatching to an external `execute($name, $arg1[, $arg2]...)` expression on the parent scope (note that 'ng-click' is not the only way to trigger this command). The parent scope is then free to handle as sees fit. `$name` argument passed to the method can be used to target a specific action. Each cell/row has access to the normal scope variable available via 'ng-repeat'. By default this is `$model` but this can be changed. Just pass `data-item-model="<name>"` attribute. _the screenshot above shows this_.
 
-There are three ways to pass data to this directive:
 
-1. Set `data-source='...'` attribute that points to an array in scope.
-2. Set `data-source='path'` attribute that holds a string that points to a http source of the data.
-3. Set `data-fetch='fn($fetch, $callback)'` a scope method that is called this: `fetch($options, $callback)`. The `$options` object has the attributes: offset:number, limit:number and search:string. This gives the parent a scope the opportunity to fetch the data anyhow. A promise may be returned or the `$callback` function utilized to dispatch the result.
+The sample below will output a div having bootstrap panel class
+    <it-collection-view data-source="source"
+         execute="command($name, $arg1, $arg2)"
+         data-paging-style="pagination"
+         data-item-model="human" data-view-type="custom"
+         data-collection-class="panel panel-default"
+         data-header-class="panel-heading"
+         data-body-class="panel-body"
+         data-footer-class="panel-footer"
+         data-page-sizes="5,10,20"
+         data-page-size="10">
+              <!-- data-sort-list creates a dropdown of sort fields appropriate for a single-column list view -->
+        <it-header-row class="panel-title" tag="h2" data-sort-list='{"firstName" : "First Name", "lastName" : "Last Name"}'>
+            <it-cell>Summary</it-cell>
+        </it-header-row>
+        <it-body-row>
+            <it-cell>
+               <div class="row"style="margin: 5px;">
+                   <div class="col-sm-4">
+                      <img ng-src="{{human.avatar}}" />
+                   </div>
+                   <div class="col-sm-8">
+                       <p class="text-right">
+                            <a href="#" ng-click="command('edit', human)"><i class="fa fa-pencil"></i></a>
+                            &nbsp;&nbsp;
+                            <a href="#" ng-click="command('delete', human)"><i class="fa fa-trash-o"></i></a>
+                       </p>
+                        First Name: <em>{{human.firstName}}</em>
+                        Last Name: <em>{{human.lastName}}</em>
+                        Company: <em>{{human.company}}</em>
+                  </div>
+              </div>
+           </it-cell>
+        </it-body-row>
+    </it-collection-view>
+	
+Result:
 
-Using `data-fetch="...` option also requires that the scope provides a way to serve total result count. This is done by passing `data-count='fn($search, $callback)'`. As above the callback may be used. The count may also be returned as a return value for the method, a promise or with the `$callback`.
+![Panel Result](test/panel.PNG "Panel presentation")
 
+This will create a table:
+    <it-collection-view data-source="source"
+         execute="command($name, $arg1, $arg2)"
+         data-paging-style="pagination"
+         data-item-model="human" data-view-type="table" data-collection-class="table-bordered hot">
+       <it-header-row>
+          <it-cell>&nbsp;</it-cell>
+          <it-cell data-sortable="true" data-property="firstName">First Name</it-cell>
+          <it-cell data-sortable="true" data-property="lastName">Last Name</it-cell>
+          <it-cell data-sortable="true" data-property="company">Company</it-cell>
+          <it-cell>Greeting</it-cell>
+          <it-cell data-tag="td">Actions</it-cell>
+       </it-header-row>
+       <it-body-row>
+          <it-cell class="text-right bg-primary">
+            <b>
+              {{$index + 1}}
+            </b>
+          </it-cell>
+          <it-cell>{{human.firstName}}</it-cell>
+          <it-cell-bind>lastName</it-cell-bind>
+          <it-cell-bind>company</it-cell-bind>
+          <it-cell-template data-model="person">greeting-cell.html</it-cell-template>
+          <it-cell class="text-right">
+             <a href="#" ng-click="command('edit', human)"><i class="fa fa-pencil"></i></a>
+                &nbsp;&nbsp;
+             <a href="#" ng-click="command('delete', human)"><i class="fa fa-trash-o"></i></a>
+          </it-cell>
+      </it-body-row>
+    </it-collection-view>
 
-The provided sample produces this:
-![sample code](test/Capture.PNG)
+Result:
+![Panel Result](test/Capture.PNG "Panel presentation")
 
 Dependencies
 --------------------------------------------
