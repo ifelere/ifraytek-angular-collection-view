@@ -1041,6 +1041,8 @@
 	/**
 	 * A factory function that creates a source that fetches its data using $http service
 	 * A count url can be passed using data-count-url attribute on the root directive
+	 * A request is made to <url>?q=search&skip=<offet>&limit=<limit>
+	 * 'count' request looks like <countUrl>?q=search if the url already has a query string then <countUrl>&q=search
 	 * */
 	module.factory("itHttpSourceProvider", ['$http', '$q', function ($http, $q)  {
 		var Provider = function (url, countUrl) {
