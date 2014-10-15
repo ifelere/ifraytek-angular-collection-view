@@ -51,76 +51,78 @@ You can transfer common html attributes on the tags listed above including 'ng-c
 
 
 The sample below will output a div having bootstrap panel class
+```html
     <it-collection-view data-source="source"
-         execute="command($name, $arg1, $arg2)"
-         data-paging-style="pagination"
-         data-item-model="human" data-view-type="custom"
-         data-collection-class="panel panel-default"
-         data-header-class="panel-heading"
-         data-body-class="panel-body"
-         data-footer-class="panel-footer"
-         data-page-sizes="5,10,20"
-         data-page-size="10">
-              <!-- data-sort-list creates a dropdown of sort fields appropriate for a single-column list view -->
+                        execute="command($name, $arg1, $arg2)"
+                        data-paging-style="pagination"
+                        data-item-model="human" data-view-type="custom"
+                        data-collection-class="panel panel-default"
+                        data-header-class="panel-heading"
+                        data-body-class="panel-body"
+                        data-footer-class="panel-footer"
+                        data-page-sizes="5,10,20"
+                        data-page-size="10">
+        <!-- data-sort-list creates a dropdown of sort fields appropriate for a single-column list view -->
         <it-header-row class="panel-title" tag="h2" data-sort-list='{"firstName" : "First Name", "lastName" : "Last Name"}'>
             <it-cell>Summary</it-cell>
         </it-header-row>
         <it-body-row>
             <it-cell>
-               <div class="row"style="margin: 5px;">
-                   <div class="col-sm-4">
-                      <img ng-src="{{human.avatar}}" />
-                   </div>
-                   <div class="col-sm-8">
-                       <p class="text-right">
+                <div class="row"style="margin: 5px;">
+                    <div class="col-sm-4">
+                        <img ng-src="{{human.avatar}}" />
+                    </div>
+                    <div class="col-sm-8">
+                        <p class="text-right">
                             <a href="#" ng-click="command('edit', human)"><i class="fa fa-pencil"></i></a>
                             &nbsp;&nbsp;
                             <a href="#" ng-click="command('delete', human)"><i class="fa fa-trash-o"></i></a>
-                       </p>
+                        </p>
                         First Name: <em>{{human.firstName}}</em>
                         Last Name: <em>{{human.lastName}}</em>
                         Company: <em>{{human.company}}</em>
-                  </div>
-              </div>
-           </it-cell>
+                    </div>
+                </div>
+            </it-cell>
         </it-body-row>
     </it-collection-view>
-	
+```
 Result:
 
 ![Panel Result](test/panel.PNG "Panel presentation")
 
 This will create a table:
+```html
     <it-collection-view data-source="source"
-         execute="command($name, $arg1, $arg2)"
-         data-paging-style="pagination"
-         data-item-model="human" data-view-type="table" data-collection-class="table-bordered hot">
-       <it-header-row>
-          <it-cell>&nbsp;</it-cell>
-          <it-cell data-sortable="true" data-property="firstName">First Name</it-cell>
-          <it-cell data-sortable="true" data-property="lastName">Last Name</it-cell>
-          <it-cell data-sortable="true" data-property="company">Company</it-cell>
-          <it-cell>Greeting</it-cell>
-          <it-cell data-tag="td">Actions</it-cell>
-       </it-header-row>
-       <it-body-row>
-          <it-cell class="text-right bg-primary">
-            <b>
-              {{$index + 1}}
-            </b>
-          </it-cell>
-          <it-cell>{{human.firstName}}</it-cell>
-          <it-cell-bind>lastName</it-cell-bind>
-          <it-cell-bind>company</it-cell-bind>
-          <it-cell-template data-model="person">greeting-cell.html</it-cell-template>
-          <it-cell class="text-right">
-             <a href="#" ng-click="command('edit', human)"><i class="fa fa-pencil"></i></a>
+                        execute="command($name, $arg1, $arg2)"
+                        data-paging-style="pagination"
+                        data-item-model="human" data-view-type="table" data-collection-class="table-bordered hot">
+        <it-header-row>
+            <it-cell>&nbsp;</it-cell>
+            <it-cell data-sortable="true" data-property="firstName">First Name</it-cell>
+            <it-cell data-sortable="true" data-property="lastName">Last Name</it-cell>
+            <it-cell data-sortable="true" data-property="company">Company</it-cell>
+            <it-cell>Greeting</it-cell>
+            <it-cell data-tag="td">Actions</it-cell>
+        </it-header-row>
+        <it-body-row>
+            <it-cell class="text-right bg-primary">
+                <b>
+                    {{$index + 1}}
+                </b>
+            </it-cell>
+            <it-cell>{{human.firstName}}</it-cell>
+            <it-cell-bind>lastName</it-cell-bind>
+            <it-cell-bind>company</it-cell-bind>
+            <it-cell-template data-model="person">greeting-cell.html</it-cell-template>
+            <it-cell class="text-right">
+                <a href="#" ng-click="command('edit', human)"><i class="fa fa-pencil"></i></a>
                 &nbsp;&nbsp;
-             <a href="#" ng-click="command('delete', human)"><i class="fa fa-trash-o"></i></a>
-          </it-cell>
-      </it-body-row>
+                <a href="#" ng-click="command('delete', human)"><i class="fa fa-trash-o"></i></a>
+            </it-cell>
+        </it-body-row>
     </it-collection-view>
-
+```
 Result:
 ![Panel Result](test/Capture.PNG "Panel presentation")
 
