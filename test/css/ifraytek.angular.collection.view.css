@@ -1,3 +1,12 @@
 .sortable {
 	cursor: pointer !important;
 }
+
+div.it-collection-body-item {
+	border-bottom: 1px inset;
+
+}
+
+div.it-collection-body-item:last-child {
+	border-bottom: none;
+}

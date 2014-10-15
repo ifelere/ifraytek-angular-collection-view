@@ -1,7 +1,7 @@
 angular.module("ifray.collection-view.test", ["it.collections", "ui.bootstrap"])
 
 .config(['itCollectionOptions', function (itCollectionOptions) {
-	itCollectionOptions.icons["default"] = "bs3";
+	//itCollectionOptions.icons["default"] = "bs3";
 }])
 
 .controller("TestCtrl", ["$scope", "$modal", function ($scope, $modal) {
@@ -11,7 +11,8 @@ angular.module("ifray.collection-view.test", ["it.collections", "ui.bootstrap"])
 			$scope.source.push({
 				firstName : Faker.Name.firstName(),
 				lastName : Faker.Name.lastName(),
-				company : Faker.Company.companyName()
+				company : Faker.Company.companyName(),
+				avatar : Faker.Image.avatar()
 			});
 		};
 	};
