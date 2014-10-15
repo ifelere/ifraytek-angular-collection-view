@@ -2,6 +2,11 @@
 	cursor: pointer !important;
 }
 
-div.it-collection-body-item:nth-child(odd) {
-	border-top: 1px inset;
+div.it-collection-body-item {
+	border-bottom: 1px inset;
+
+}
+
+div.it-collection-body-item:last-child {
+	border-bottom: none;
 }

@@ -1,0 +1,96 @@
+<!doctype html>
+<html ng-app="ifray.collection-view.test">
+	<head>
+		
+	<title>Collection View Test (Panel)</title>
+	<link href="css/font-awesome/css/font-awesome.min.css" type="text/css" rel="stylesheet">
+	
+    <link href="js/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" type="text/css">
+    <link href="js/bootstrap/dist/css/bootstrap-theme.min.css" type="text/css" rel="stylesheet">
+    <script type="text/javascript" src="js/underscore/underscore.js"></script>
+    <script type="text/javascript" src="js/jquery/dist/jquery.min.js"></script>
+	<script type="text/javascript" src="js/bootstrap/dist/js/bootstrap.min.js"></script>
+	<script type="text/javascript" src="js/angular/angular.js"></script>
+	<script type="text/javascript" src="js/ui-bootstrap-tpls-0.11.2.min.js"></script>
+	
+	<link type="text/css" href="css/ifraytek.angular.collection.view.css" rel="stylesheet">
+	<style>
+		tr.action {
+			cursor: pointer;
+		}
+	</style>
+	
+	<script type="text/javascript" src="js/Faker/MinFaker.js"></script>
+    <script type="text/javascript" src="js/ifraytek.angular.collection.view.js"></script>
+    <script type="text/javascript" src="js/test-module.js"></script>
+	
+	<script id="edit-template.html" type="text/ng-template">
+		<form name="frmEdit" novalidate ng-submit="save(frmEdit)">
+			<div class="modal-body">
+				<label>First Name:</label>
+				<input type="text" class="form-control" name="name" ng-model="model.firstName" />
+				<label>Last Name:</label>
+				<input type="text" class="form-control" name="last" ng-model="model.lastName" />
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-danger" ng-click="cancel()">
+					Cancel
+				</button>
+				<button type="submit" class="btn btn-primary">
+					Save
+				</button>
+			</div>
+		</form>
+	</script>
+</head>
+    <body>
+		<div class="content">
+			<div class="row">
+				<div class="col-sm-12">
+					<h3>Panel</h3>
+					<div data-ng-controller="TestCtrl">
+						<it-collection-view data-source="source"
+							execute="command($name, $arg1, $arg2)"
+							data-paging-style="pagination"
+							data-item-model="human" data-view-type="custom"
+							data-collection-class="panel panel-default"
+							data-header-class="panel-heading"
+							data-body-class="panel-body"
+							data-footer-class="panel-footer"
+							data-page-sizes="5,10,20"
+							data-page-size="10">
+							<it-header-row class="panel-title" tag="h2" data-sort-list='{"firstName" : "First Name", "lastName" : "Last Name"}'>
+								<it-cell>Summary</it-cell>
+							</it-header-row>
+							<it-body-row>
+								<it-cell>
+									<div class="row"style="margin: 5px;">
+										<div class="col-sm-4">
+											<img ng-src="{{human.avatar}}" />
+										</div>
+										<div class="col-sm-8">
+											<p class="text-right">
+												<a href="#" ng-click="command('edit', human)"><i class="fa fa-pencil"></i></a>
+												&nbsp;&nbsp;
+												<a href="#" ng-click="command('delete', human)"><i class="fa fa-trash-o"></i></a>
+											</p>
+											<p>
+												First Name: <em>{{human.firstName}}</em>
+											</p>
+											<p>
+												Last Name: <em>{{human.lastName}}</em>
+											</p>
+											<p>
+												Company: <em>{{human.company}}</em>
+											</p>
+										</div>
+									</div>
+								</it-cell>
+							</it-body-row>
+						</it-collection-view>
+					</div>
+				</div>
+			</div>
+		</div>
+    </body>
+</html>

@@ -1,6 +1,14 @@
+/**
+ * Copyright 2014 IFELERE ifelere@gmail.com
+ * Angular module with directive targeting rendering of collections
+ * 
+ * */
 (function (angular) {
-	var module = angular.module("it.collections", []);
-
+	var module = angular.module("it.collections", ["it.collections.templates"]);
+	
+	/**
+	 * Utility function equivalent to underscore.js 'any' / 'some'
+ 	 * */
 	var any = function (list, fn) {
 		if (angular.isArray(list)) {
 			for (var j = 0, len = list.length; j < len; j++) {
@@ -20,8 +28,8 @@
 	};
 	
 	var map = function (list, fn, ctx) {
-		if (angular.isDefined(list.map)) {
-			return list.map(fn);
+		if (angular.isFunction(Array.prototype.map)) {
+			return Array.prototype.map.call(list, fn);
 		}
 		var dest = [];
 		angular.forEach(list, function (it, key) {
@@ -30,7 +38,6 @@
 			}else {
 				dest.push(fn(it, key));
 			}
-			
 		});
 		return dest;
 	};
@@ -121,6 +128,10 @@
 		pageSizes : [10, 50, 100]
 	});
 	
+	/**
+	 * Constant object having general options for collection directive.
+	 * It includes definitions for icon packs
+	 * */
 	module.constant("itCollectionOptions", {
 		icons : {
 			"default" : "fa",
@@ -159,6 +170,11 @@
 		
 	});
 	
+	/**
+	 * Factory object to resolve an icon class to a full class depending on selected pack
+	 * Returns an object with #pack(name:string) function.
+	 * It transforms an icon class from say 'spinner' to an equivalent in 'font awesome' or 'glyphicon'
+	 * */
 	module.factory("itIconProvider", ['itCollectionOptions', function (options) {
 		return {
 			get : function (name) {
@@ -177,6 +193,9 @@
 	
 	}]);
 	
+	/**
+	 * A directive to translate an icon class to full class given a generic name and apply it to an element's css class property
+	 * */
 	module.directive("itIcon", ['itIconProvider', function (provider) {
 		return function (scope, element, attrs) {
 			var icon = provider.get(attrs.itIcon);
@@ -184,6 +203,9 @@
 		};
 	}]);
 	
+	/**
+	 * A map of resolved attribute names to view template html attributes
+	 * */
 	var attributeTranslations = {
 		"itIf" : function (val) {
 			return 'data-ng-if="' + val + '"';
@@ -236,7 +258,12 @@
 		
 	};
 
-	
+	/**
+	 * Extract named attributes from a hash
+	 * @param hash {Object}
+	 * @param name {param list} a list of names of attributes to look for in hash
+	 * @return {String} a string of html attributes form like 'p1="v1"[ p2="v2"...]'
+	 * */
 	var extractAttributes = function (hash) {
 		var attributes = '';
 		for (var j = 1, len = arguments.length; j < len; j++) {
@@ -252,16 +279,29 @@
 		return attributes;
 	};
 
+	/**
+	 * Pick standard attribute map from a source attribute map
+	 * @param attr {Attribute, Object} a map that could come from a directive's '$attrs' argument
+	 * @param extend {Object} [optional] an optional object to extend extraction with
+	 * @return {Object}
+	 * */
 	var pickAttributes = function (attr, extend) {
 		var o = pick(attr, 'itNgClass', 'itClass',
 		'id', 'itClick', 'class', 'ngClass', 'style', "ngHide", "itHide",
-		'ngStyle', 'sortable', 'property', 'title', 'it-collection-body-item', 'tag', 'ngModel', 'model', 'colspan');
+		'ngStyle', 'sortable', 'property', 'sortObject', 'title', 'it-collection-body-item', 'tag', 'ngModel', 'model', 'colspan');
 		if (extend) {
 			angular.extend(o, extend);
 		}
 		return o;
 	};
 
+	/**
+	 * Create 'wrapper' object which creates an element to wrap a content
+	 * @param tag {String} the html tag that should be created
+	 * @return {Object} an object having the attributes:
+	 *		#open(options), #close(options)
+	 * NOTE: Passing tag attribute to a directive's element overrides automatic tag choice for a presenter
+	 * */
 	var createWrapper = function (tag) {
 		return {
 			open : function (o) {
@@ -278,10 +318,18 @@
 	};
 
 	
-	
+	/**
+	 * A class to encapsulate information about a collection item 'cell'.
+	 * It also declares #render() function to render the contents of the cell in a parent context
+	 * */
 	var Cell = function () {};
 
 	Cell.prototype = {
+		/**
+		 * Renders the content of a cell the actual content render is delegated to an instance of {ContentModel}
+		 * @param options {Object} typically an attribute hash and data to be used by the content model
+		 * @return {String}
+		 * */
 		render : function (options) {
 			var str = '';
 			if (this.wrapper) {
@@ -295,6 +343,9 @@
 		}
 	};
 
+	/**
+	 * A class to encapsulate a collection of cells and group functions of the cells
+	 * */
 	var CellCollection = function () {
 		this.__cells = [];
 		this.addCell = function (cell, options) {
@@ -311,7 +362,7 @@
 		this.getCellCount = function () {
 			return this.__cells.length;
 		};
-
+		//Create wrappers for each cell if not set
 		this.wrapCells = function (defaultTag) {
 			angular.forEach(this.__cells, function (c) {
 				if (angular.isUndefined(c.cell.wrapper)) {
@@ -319,13 +370,18 @@
 				}
 			});
 		};
-
+		/**
+		 * Sets the model name to use on each cell.	The model name is the context object for each 'row'. In this case the object present in 'ngRepeat'
+		 * */
 		this.setModelName = function (name) {
 			angular.forEach(this.__cells, function (c) {
 				c.cell.content.model = name;
 			});
 		};
 
+		/**
+		 * Renders this cell collection (including individual cells)
+		 * */
 		this.render = function (options) {
 			var str = '';
 			if (this.wrapper) {
@@ -345,12 +401,19 @@
 		};
 	};
 
+	/**
+	 * A abstract class that is actually
+	 * */
 	var ContentModel = function () {};
 
 	ContentModel.prototype = {
 		render : function () {}
 	};
-
+	
+	
+	/**
+	 * A content model that renders data as-is without doing any transformation
+	 * */
 	var StaticContentModel = function () {};
 
 	StaticContentModel.prototype = new ContentModel();
@@ -359,6 +422,9 @@
 		return options.data;
 	};
 
+	/**
+	 * A content model that wraps data in angular interpolation expression
+	 * */
 	var InterpolateContentModel = function () {};
 
 	InterpolateContentModel.prototype = new ContentModel();
@@ -372,6 +438,9 @@
 		return "{{" + options.data + "}}";
 	};
 
+	/**
+	 * A content model that passes the data string into 'ngBindHtml' expression
+	 * */
 	var HtmlContentModel = function () {};
 
 	HtmlContentModel.prototype = new ContentModel();
@@ -384,6 +453,10 @@
 		return ('<' + tag + ' data-ng-bind-html="' + options.data + '"></' + tag + '>');
 	};
 
+	/**
+	 * A content model that passes the data string as @src attribute of ng-include tag
+	 * To make it use an explicit object name to be used in the ng-include scope set @model attribute on the cells directive
+	 * */
 	var TemplateContentModel = function () {};
 	TemplateContentModel.prototype = new ContentModel();
 	TemplateContentModel.prototype.render = function (options) {
@@ -395,6 +468,10 @@
 		return '<ng-include data-ng-init="' + localModel + '=' + this.model + '" src="\'' + options.data + '\'"></ng-include>';
 	};
 	
+	/**
+	 * Directive to compile data for rows making up the header of a collection view
+	 * Standard html attributes (class, id, ngClick ...) are passed through to resulting html element
+	 * */
 	module.directive("itHeaderRow", [function () {
 				var Controller = function () {
 					this.addCell = function (cell, options) {
@@ -417,6 +494,10 @@
 			}
 		]);
 
+	/**
+	 * Directive to compile data for rows making up the body of a collection view
+	 * Standard html attributes (class, id, ngClick ...) are passed through to resulting html element
+	 * */
 	module.directive("itBodyRow", [function () {
 				var Controller = function () {
 					this.addCell = function (cell, options) {
@@ -438,7 +519,11 @@
 				};
 			}
 		]);
-
+	/**
+	 * Directive to render a cell whose content is rendered as-is. The developer is fully responsible for what is rendered.
+	 * The item-model attribute can be used.
+	 * The content of the cell is derived from the contents of this directive's class
+	 * */
 	module.directive("itCellStatic", [function () {
 				return {
 					restrict : 'E',
@@ -464,6 +549,12 @@
 				};
 			}
 		]);
+	/**
+	 * Directive to render a cell whose content is rendered as-is. The developer is fully responsible for what is rendered.
+	 * The item-model attribute can be used.
+	 * The content of the cell is derived from the contents of this directive's class
+	 * This actually does the same thing is itCellStatic. itCell seems more appropriate
+	 * */
 	module.directive("itCell", [function () {
 				return {
 					restrict : 'E',
@@ -490,6 +581,9 @@
 			}
 		]);
 
+	/**
+	 * Renders simple bind expression on a model#attribute given as the text content of this directive's element
+	 * */
 	module.directive("itCellBind", [function () {
 				return {
 					restrict : 'E',
@@ -516,6 +610,9 @@
 			}
 		]);
 
+	/**
+	 * Renders ng-bind-html expression on a model#attribute given as the text content of this directive's element
+	 * */
 	module.directive("itCellHtml", [function () {
 				return {
 					restrict : 'E',
@@ -541,7 +638,10 @@
 				};
 			}
 		]);
-		
+	/**
+	 * Renders ng-include using the text content of this directive's element as the 'src' attribute.
+	 * If model attribute is set then it is used as a local name for the ng-include scope
+	 * */	
 	module.directive("itCellTemplate", [function () {
 				return {
 					restrict : 'E',
@@ -568,6 +668,10 @@
 			}
 		]);
 
+	/**
+	 * Controller class that coordinates generation of presentation models as well as paging and sorting of a collection.
+	 * The actual collection view is delegated using #fetch() and #count() methods
+	 * */
 	var CollectionViewCtrl = function ($scope, $timeout, options, iconProvider, $interval) {
 		this.headers = [];
 		this.rows = [];
@@ -850,10 +954,18 @@
 				}
 			}
 		};
+		
+		$scope.getPagingInfoTemplateUrl = function () {
+			return $scope.pagingInfoTemplateUrl || "it-current-page-info.html";
+		};
 	};
 	
 	module.controller("CollectionViewCtrl", ['$scope', '$timeout', 'itPagingOptions', 'itIconProvider', '$interval', CollectionViewCtrl]);
-
+	
+	/**
+	 * factory function which creates a class that manages an array for paging/search/counting.
+	 * 
+	 * */
 	module.factory("itArraySourceProvider", ['$filter', function ($filter)  {
 		var objectMatch = function (obj, q) {
 			return any(obj, function (value) {
@@ -916,12 +1028,20 @@
 	
 	
 		return {
+			/**
+			 * Gets an ArraySource that uses array argument as its base. This array is then paged/searched/counted
+			 * @param list {Array}
+			 * */
 			create : function (list) {
 				return new Provider(list);
 			}
 		};
 	}]);
 	
+	/**
+	 * A factory function that creates a source that fetches its data using $http service
+	 * A count url can be passed using data-count-url attribute on the root directive
+	 * */
 	module.factory("itHttpSourceProvider", ['$http', '$q', function ($http, $q)  {
 		var Provider = function (url, countUrl) {
 			this.url = url;
@@ -967,6 +1087,13 @@
 	
 	
 		return {
+			/**
+			 * Gets a HttpSource that fetches data using $http service
+			 * @param url {String} the url.
+			 * @param countUrl {String} the url fetch a count of data from server. If omitted then it is assumed that 'count' is available at url injected with '/count' segment
+			 *
+			 * The server has the responsible for paging. The server gets 'skip=s&limit=l' on the query
+			 * */
 			create : function (url, countUrl) {
 				if (angular.isUndefined(countUrl) || countUrl.length === 0) {
 					var idx = url.indexOf("?");
@@ -981,7 +1108,10 @@
 		};
 	}]);
 	
-	module.factory("itTableCollectionView", ['$templateCache', '$compile', '$q',
+	/**
+	 * Creates present that renders in collection in an html table
+	 * */
+	module.factory("itTablePresenter", ['$templateCache', '$compile', '$q',
 		function ($templateCache, $compile, $q) {
 		
 		var SortingColumnWrapper = function (property) {
@@ -1047,10 +1177,15 @@
 		};
 	}]);
 	
-	module.factory("itCustomCollectionView", ['$templateCache', '$compile', '$q', function ($templateCache, $compile, $q) {
+	/**
+	 * Creates a presenter that renders a collection in a div block
+	 * */
+	module.factory("itCustomPresenter", ['$templateCache', '$compile', '$q', function ($templateCache, $compile, $q) {
 		return {
 			make : function (scope, attributes, controller, ngRepeat) {
 				var deferred = $q.defer();
+				
+				scope.sortList = [];
 				
 				scope.noHeader = controller.headers.length === 0;
 
@@ -1069,7 +1204,6 @@
 							cb(child);
 							return false;
 						}
-					
 					});
 				};
 
@@ -1078,8 +1212,12 @@
 						return v.hasClass("collection-header");
 					}, function (el) {
 						angular.forEach(controller.headers, function (h) {
+							if (h.options.sortable !== 'false' && h.options.property) {
+								h.cell.wrapper = new SortingColumnWrapper(h.options.property);
+							}
 							h.row.wrapper = createWrapper(h.options.tag || 'div');
 							el.append(angular.element(h.row.render(h.options)));
+							
 						});
 					});
 				}
@@ -1109,14 +1247,84 @@
 		};
 	}]);
 	
-	module.directive("itCollectionView", ['$http',
-			'$filter', '$q', '$templateCache', 'itPagingOptions', '$injector',
-			function ($http, $filter, $q, $templateCache, pagingOptions, $injector) {
+	module.factory("itSortList", [function () {
+		var toLabel = function (str) {
+			str = str.replace((/([a-z])([0-9A-Z])/g), function (s, p1, p2) {
+				return p1 + " " + p2;
+			});
+			return str.charAt(0).toUpperCase() + str.substring(1);
+		};
+		return {
+			process : function ($scope, controller) {
+				$scope.sortList = [];
 				
-				var viewRenderProviders = {
-					"default" : "itTableCollectionView",
-					table : "itTableCollectionView",
-					custom : "itCustomCollectionView"
+				$scope.applySortInfo = function (info) {
+					$scope.selectedSort = info;
+					$scope.changeSortKey(info.property);
+				};
+				
+				$scope.toggleOrder = function () {
+					if ($scope.selectedSort) {
+						$scope.changeSortKey($scope.selectedSort.property);
+					}
+				};
+				
+				angular.forEach(controller.headers, function (h) {
+					if (angular.isDefined(h.options.sortList)) {
+						var sortList;
+						//if the info is an object or array then it is a json string
+						if (/^[\{\[]/.test(h.options.sortList)) {
+							sortList = angular.fromJson(h.options.sortList);
+						}else {
+							//else it is a comma-delimited string
+							sortList = h.options.sortList.split(/\,\*/g);
+						}
+						
+						angular.forEach(sortList, function (info, key) {
+							if (angular.isNumber(key)) {
+								$scope.sortList.push({property : info, label : toLabel(info)});
+							}else {
+								$scope.sortList.push({property : key, label : info});
+							}
+						});
+					}
+				});
+			}
+		};
+	}]);
+	/**
+	 * Root directive. This directive accepts customization for the collection view e.g for paging, presenter type etc.
+	 * Supported attributes are:
+	 * data-source : {String, Array} if a string then the collection source is fetch using $http service. See itArraySourceProvider comments. This is the simplest usage
+	 * data-fetch : {fn($options, $callback)} if source is missing then is responsible for fetching collection. The $options object has {offset, limit, search} attributes. The $callback may be used to deliver the result or return a promise or the actual array
+	 * data-count : {fn($search, $callback)} if source is missing then this callback is used to get the count
+	 * data-view-type : 'table' or 'custom' presenter type
+	 * data-collection-class: the class to use on the presenter wrapper. If it is a table this can be 'table-bordered', for example. To achieve a bootstrap panel set this to 'panel'
+	 * data-body-class : If the presenter is 'custom' and collection-class is 'panel' set this to 'panel-body' to achieve bootstrap panel body. For table presenter this becomes the class of the 'tbody' tag
+	 * data-header-class: If the presenter is 'custom' and collection-class is 'panel' set this to 'panel-heading' to achieve bootstrap panel heading
+	 * data-footer-class: If the presenter is 'custom' and collection-class is 'panel' set this to 'panel-footer' to achieve bootstrap panel footer
+	 * data-collection-style : The style to use on the presenter wrapper,
+	 * data-refresh-interval : If set the collection is refresh every set interval (if refresh of the whole collection is undesirable a better what is to use an array source with the refresh process takinng place in parent scope),
+	 * paging-control-template-url : Set this if you want to use a custom paging controls. Make sure the controls call onPageChanged(pageNumber)
+	 * search-control-template-url : Set this if you want a custom control for searching. Ensure that you either set ng-change="search(query)" or use ng-click="search(query)" to pass the search to the directive scope
+	 * data-hide-search : true/false
+	 * data-empty-message : If you want a custom 'empty' message,
+	 * data-empty-template-url : If you want a template to be used to render 'empty',
+	 * loading-message : If you want a custom 'loading' message,
+	 * loading-template-url : If you want to use a template instead for display 'loading' status,
+	 * data-paging-style : 'pagination' or 'pager',
+	 * execute : A callback that gets generic commands fired from an event in the collection view. The command may trigger via any UI event like click. The expression to trigger the command must be: 'command(name, args)'. The execute callback then gets 'fn($name, $arg1[, $arg2, ....])' The number of 'argn' arguments depend on what is passed to 'command(name, args)'
+	 * data-paging-info-class : The css class to use on the paging info element (i.e that shows ),
+	 * hidePagingInfo : '@'
+	 * */
+	module.directive("itCollectionView", ['$http',
+			'$filter', '$q', '$templateCache', 'itPagingOptions', '$injector', 'itSortList',
+			function ($http, $filter, $q, $templateCache, pagingOptions, $injector, sortList) {
+				
+				var standardPresenters = {
+					"default" : "itTablePresenter",
+					table : "itTablePresenter",
+					custom : "itCustomPresenter"
 				};
 				
 				var sources = {
@@ -1191,30 +1399,7 @@
 									controller.notifyComplete();
 								});
 							}
-							// if (_.isString(source)) {
-								// var countUrl = att.countUrl || '';
-								// if (countUrl.length === 0) {
-									// var idx = source.indexOf("?");
-									// if (idx === -1) {
-										// countUrl = source + "/count";
-									// } else {
-										// countUrl = source.replace(/\?/, '/count?');
-									// }
-								// }
-								// var localSrc = new HttpSource(source, countUrl);
-								// _.bindAll(localSrc, "fetch", "count");
-								// scope.fetch = localSrc.fetch;
-								// scope.count = localSrc.count;
-								// controller.notifyComplete();
-							// } else if (_.isArray(source)) {
-								// var src = new ArraySource(source);
-								// _.bindAll(src, "fetch", "count");
-								// scope.fetch = src.fetch;
-								// scope.count = src.count;
-								// controller.notifyComplete();
-							// }
 						});
-						
 					}
 				};
 				
@@ -1226,7 +1411,7 @@
 
 					scope.pagingStyle = att.pagingStyle || pagingOptions.style;
 					
-					var provider = viewRenderProviders[viewType];
+					var provider = standardPresenters[viewType] || viewType;
 					
 					angular.forEach(controller.rows, function (r) {
 						r.options.ngHide = "loading"; 
@@ -1234,9 +1419,12 @@
 						addClass(r.options, "it-collection-body-item");
 					});
 					
+					
 					$injector.invoke([provider, function (P) {
 						P.make(scope, att, controller, ngRepeat)
 						.then(function (root) {
+							//look for an inject sort list
+							sortList.process(scope, controller);
 							element.replaceWith(root);
 							controller.notifyComplete();
 						});
@@ -1253,6 +1441,8 @@
 						pagingClass : '@',
 						bodyClass : '@',
 						headerClass : '@',
+						hideSearch : '@',
+						hideIfEmpty : '@',
 						footerClass : '@',
 						pagingMaxSize : '@',
 						count : '&',
@@ -1261,8 +1451,12 @@
 						searchControlTemplateUrl : '@',
 						emptyMessage : '@',
 						emptyTemplateUrl : '@',
+						loadingMessage : '@',
+						loadingTemplateUrl : '@',
 						pagingStyle : '@',
-						execute : '&'
+						execute : '&',
+						pagingInfoClass : '@',
+						hidePagingInfo : '@'
 					},
 					controller : "CollectionViewCtrl",
 					compile : function () {
@@ -1284,24 +1478,22 @@
 			}
 		]);
 		
-	module.run(['$templateCache', function ($templateCache) {
-		$templateCache.put("it-current-page-info.html", '<span>'.concat(
+	angular.module("it.collections.templates", []).run(['$templateCache', function ($templateCache) {
+		
+		$templateCache.put("it-current-page-info.html", '<span class="pagingInfoClass" data-ng-hide="hidePagingInfo">'.concat(
 			'Page {{currentPage}}/{{pageCount}} ({{totalCount}})',
 		'</span>'));
-	}]);
-
-	module.run(['$templateCache', function ($templateCache) {
-				$templateCache.put("it-collection-search-control.html", '<div class="input-group">'.concat(
+		
+		
+		$templateCache.put("it-collection-search-control.html", '<div class="input-group">'.concat(
 							'<input type="text" class="form-control" placeholder="search" data-ng-model="q" data-ng-change="search(q, true)" />',
 								'<div class="input-group-addon">',
 									'<i it-icon="search"></i>',
 								'</div>',
 						'</div>'));
-			}
-		]);
-
-	module.run(["$templateCache", function ($templateCache) {
-				$templateCache.put("it-collection-pagination.html", '<pagination data-ng-model="currentPage"'.concat(
+						
+						
+		$templateCache.put("it-collection-pagination.html", '<pagination data-ng-model="currentPage"'.concat(
 						'max-size="{{pagingMaxSize || 5}}" ',
 						'class="pagingClass"',
 						'total-items="totalCount" ',
@@ -1315,121 +1507,123 @@
 						'boundary-links="boundaryLinks" ',
 						'data-ng-change="onPageChanged(currentPage)"',
 						'></pagination>'));
-			}
-		]);
-
-	module.run(["$templateCache", function ($templateCache) {
-				$templateCache.put("it-collection-pager.html", '<pager data-ng-model="currentPage"'.concat(
-						'total-items="totalCount" ',
-						'class="pagingClass"',
-						'previous-text="{{previousText}}" ',
-						'num-pages="$parent.pageCount" ',
-						'next-text="{{nextText}}" ',
-						'items-per-page="pageSize" ',
-						'data-ng-change="onPageChanged(currentPage)"',
-						'></pager>'));
-			}
-		]);
-
-	module.run(['$templateCache', function ($templateCache) {
-				$templateCache.put("it-table-collection-view.html", '<div class="it-collection-view-wrapper">'.concat(
-							'<div id="it-collection-search-wrapper">',
-								'<ng-include style="width: 270px;" class="pull-right" src="getSearchControlTemplateUrl()"> </ng-include>',
-								'<p>&nbsp;</p>',
-							'</div>',
-							'<br class="clearfix" />',
-							'<div class="table-responsive">',
-								'<table class="table {{collectionClass || \'table-striped\'}}" style="{{collectionStyle}}">',
-									'<thead data-ng-hide="noHeader" class="{{headerClass}}">',
-									'</thead>',
-									'<tfoot>',
-										'<tr class="{{footerClass}}">',
-											'<td colspan="{{columnCount}}">',
-												'<div class="row">',
-													'<div class="col-sm-3">',
-														'<select data-ng-model="pageSize" ',
-															'data-ng-options="sz for sz in pageSizes" ',
-															'data-ng-change="reLoad(true)"></select>',
-															' &nbsp; <span ng-include="it-current-page-info.html"></span>',
-													'</div>',
-													'<div class="col-sm-9 text-right">',
-														'<ng-include src="getPagingControlsTemplateUrl()"></ng-include>',
-													'</div>',
-												'</div>',
-											'</td>',
-										'</tr>',
-									'</tfoot>',
-									'<tbody>',
-										'<tr data-ng-if="loading">',
-											'<td colspan="{{columnCount}}" class="text-center">',
-												'<div data-ng-if="loadingTemplateUrl">',
-													'<ng-include src="loadingTemplateUrl"><ng-include>',
-												'</div>',
-												'<span data-ng-if="!loadingTemplateUrl">',
-													'<i it-icon="spinner" class="fa-spin fa-2x"></i> &nbsp;&nbsp;',
-													'<em>{{loadingMessage || "loading &hellip;"}}</em>',
-												'<span>',
-											'</td>',
-										'</td>',
-										'<tr data-ng-if="$empty">',
-											'<td colspan="{{columnCount}}" class="text-center">',
-												'<em data-ng-if="!emptyTemplateUrl"><b>{{emptyMessage || "No record found"}}</b></em>',
-												'<span data-ng-if="emptyTemplateUrl">',
-													'<ng-include src="emptyTemplateUrl"></ng-include>',
-												'</span>',
-											'</td>',
-										'</td>',
-									'</tbody>',
-								'</table>',
-							'</div>',
-						'</div>'));
-			}
-		]);
-		
-	module.run(['$templateCache', function ($templateCache) {
-				$templateCache.put("it-custom-collection-view.html", '<div class="it-collection-view-wrapper">'.concat(
-							'<div id="it-collection-search-wrapper">',
-								'<ng-include style="width: 270px;" class="pull-right" src="getSearchControlTemplateUrl()"> </ng-include>',
-								'<p>&nbsp;</p>',
-							'</div>',
-							'<br class="clearfix" />',
-							'<div class="">',
-								'<div class="{{collectionClass}}" style="{{collectionStyle}}">',
-									'<div data-ng-hide="noHeader" class="{{headerClass}} collection-header">',
-									'</div>',
-									'<div class="collection-body {{bodyClass}}">',
-										'<div data-ng-if="loading">',
-											'<div data-ng-if="loadingTemplateUrl">',
-												'<ng-include src="loadingTemplateUrl"><ng-include>',
-											'</div>',
-											'<span data-ng-if="!loadingTemplateUrl">',
-												'<i it-icon="spinner" class="fa-spin fa-2x"></i>&nbsp;&nbsp;',
-												'<em>{{loadingMessage || "loading &hellip;"}}</em>',
-											'<span>',
-										'</div>',
-										'<div data-ng-if="$empty">',
-											'<p data-ng-if="!emptyTemplateUrl" class="text-center"><em><b>{{emptyMessage || "No record found"}}</b></em></p>',
-											'<div data-ng-if="emptyTemplateUrl">',
-												'<ng-include src="emptyTemplateUrl"></ng-include>',
-											'</div>',
-										'</div>',
-									'</div>',
-									'<div class="{{footerClass}} collection-footer">',
+						
+		$templateCache.put("it-collection-pager.html", '<pager data-ng-model="currentPage"'.concat(
+				'total-items="totalCount" ',
+				'class="pagingClass"',
+				'previous-text="{{previousText}}" ',
+				'num-pages="$parent.pageCount" ',
+				'next-text="{{nextText}}" ',
+				'items-per-page="pageSize" ',
+				'data-ng-change="onPageChanged(currentPage)"',
+				'></pager>'));
+					
+					
+					
+		$templateCache.put("it-table-collection-view.html", '<div class="it-collection-view-wrapper">'.concat(
+					'<div id="it-collection-search-wrapper" data-ng-hide="hideSearch">',
+						'<ng-include style="width: 270px;" class="pull-right" src="getSearchControlTemplateUrl()"> </ng-include>',
+						'<ng-include class="pull-left" style="margin-right: 275px;" src="\'it-sort-list-template.html\'"></ng-include>',
+						'<br class="clearfix"/>',
+					'</div>',
+					'<br class="clearfix" />',
+					'<div class="table-responsive">',
+						'<table class="table {{collectionClass || \'table-striped\'}}" style="{{collectionStyle}}">',
+							'<thead data-ng-hide="noHeader" class="{{headerClass}}">',
+							'</thead>',
+							'<tfoot>',
+								'<tr class="{{footerClass}}">',
+									'<td colspan="{{columnCount}}">',
 										'<div class="row">',
 											'<div class="col-sm-3">',
 												'<select data-ng-model="pageSize" ',
 													'data-ng-options="sz for sz in pageSizes" ',
 													'data-ng-change="reLoad(true)"></select>',
-													' &nbsp; <span ng-include="it-current-page-info.html"></span>',
+													' &nbsp; <span ng-include="getPagingInfoTemplateUrl()"></span>',
 											'</div>',
 											'<div class="col-sm-9 text-right">',
 												'<ng-include src="getPagingControlsTemplateUrl()"></ng-include>',
 											'</div>',
 										'</div>',
-									'</div>',
+									'</td>',
+								'</tr>',
+							'</tfoot>',
+							'<tbody>',
+								'<tr data-ng-if="loading">',
+									'<td colspan="{{columnCount}}" class="text-center">',
+										'<div data-ng-if="loadingTemplateUrl">',
+											'<ng-include src="loadingTemplateUrl"><ng-include>',
+										'</div>',
+										'<span data-ng-if="!loadingTemplateUrl">',
+											'<i it-icon="spinner" class="fa-spin fa-2x"></i> &nbsp;&nbsp;',
+											'<em>{{loadingMessage || "loading &hellip;"}}</em>',
+										'<span>',
+									'</td>',
+								'</td>',
+								'<tr data-ng-if="$empty">',
+									'<td colspan="{{columnCount}}" class="text-center">',
+										'<em data-ng-if="!emptyTemplateUrl"><b>{{emptyMessage || "No record found"}}</b></em>',
+										'<span data-ng-if="emptyTemplateUrl">',
+											'<ng-include src="emptyTemplateUrl"></ng-include>',
+										'</span>',
+									'</td>',
+								'</td>',
+							'</tbody>',
+						'</table>',
+					'</div>',
+				'</div>'));
+				
+			$templateCache.put("it-sort-list-template.html", '<div data-ng-show="sortList.length>0"><label>sort by </label>'.concat(
+				'<select data-ng-model="sortInfo" data-ng-options="info as info.label for info in sortList" data-ng-change="applySortInfo(sortInfo)"></select>',
+				' <a data-ng-show="selectedSort.property" href="javascript:void(0);" data-ng-click="toggleOrder()"><i class="{{getSortIconClass(selectedSort.property)}} fa-2x"></i></a>',
+			'</div>'));
+						
+			$templateCache.put("it-custom-collection-view.html", '<div class="it-collection-view-wrapper">'.concat(
+				'<div class="">',
+					'<div class="{{collectionClass}}" style="{{collectionStyle}}">',
+						'<div data-ng-hide="noHeader" class="{{headerClass}} collection-header">',
+						'</div>',
+						'<div class="{{bodyClass}}">',
+							'<div id="it-collection-search-wrapper">',
+								'<div>',
+									'<ng-include data-ng-hide="hideSearch" style="width: 270px;" class="pull-right" src="getSearchControlTemplateUrl()"> </ng-include>',
+									'<ng-include class="pull-left" style="margin-right: 275px;" src="\'it-sort-list-template.html\'"></ng-include>',
+									'<br class="clearfix"/>',
+								'</div>',
+								'<br class="clearfix"/>',
+							'</div>',
+							'<div class="collection-body clearfix"></div>',
+							'<div data-ng-if="loading">',
+								'<div data-ng-if="loadingTemplateUrl">',
+									'<ng-include src="loadingTemplateUrl"><ng-include>',
+								'</div>',
+								'<span data-ng-if="!loadingTemplateUrl">',
+									'<i it-icon="spinner" class="fa-spin fa-2x"></i>&nbsp;&nbsp;',
+									'<em>{{loadingMessage || "loading &hellip;"}}</em>',
+								'<span>',
+							'</div>',
+							'<div data-ng-if="$empty">',
+								'<p data-ng-if="!emptyTemplateUrl" class="text-center"><em><b>{{emptyMessage || "No record found"}}</b></em></p>',
+								'<div data-ng-if="emptyTemplateUrl">',
+									'<ng-include src="emptyTemplateUrl"></ng-include>',
 								'</div>',
 							'</div>',
-						'</div>'));
-			}
-		]);
+						'</div>',
+						'<div class="{{footerClass}} collection-footer">',
+							'<div class="row">',
+								'<div class="col-sm-3">',
+									'<select data-ng-model="pageSize" ',
+										'data-ng-options="sz for sz in pageSizes" ',
+										'data-ng-change="reLoad(true)"></select>',
+										' &nbsp; <span ng-include="getPagingInfoTemplateUrl()"></span>',
+								'</div>',
+								'<div class="col-sm-9 text-right">',
+									'<ng-include src="getPagingControlsTemplateUrl()"></ng-include>',
+								'</div>',
+							'</div>',
+						'</div>',
+					'</div>',
+				'</div>',
+			'</div>'));
+	}]);
 })(angular);
